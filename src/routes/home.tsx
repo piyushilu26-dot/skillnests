@@ -4,7 +4,7 @@ import { Hero } from "@/components/site/Hero";
 
 export const Route = createFileRoute("/home")({
   ssr: false,
-  head: () => ({ meta: [{ title: "Home — skillnests.in" }] }),
+  head: () => ({ meta: [{ title: " - SkillNests" }] }),
   component: Home,
 });
 

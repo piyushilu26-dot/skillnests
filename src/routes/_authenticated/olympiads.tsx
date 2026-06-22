@@ -9,7 +9,7 @@ import { PaidPageGate } from "@/components/PaidGate";
 
 export const Route = createFileRoute("/_authenticated/olympiads")({
   ssr: false,
-  head: () => ({ meta: [{ title: "Olympiads — skillnests.in" }] }),
+  head: () => ({ meta: [{ title: " - SkillNests" }] }),
   component: OlympiadsPage,
 });
 

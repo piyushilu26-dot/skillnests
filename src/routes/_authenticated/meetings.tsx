@@ -10,7 +10,7 @@ import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/meetings")({
   ssr: false,
-  head: () => ({ meta: [{ title: "Meetings — skillnests.in" }] }),
+  head: () => ({ meta: [{ title: " - SkillNests" }] }),
   component: MeetingsPage,
 });
 

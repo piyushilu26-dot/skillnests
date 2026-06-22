@@ -25,7 +25,7 @@ import { auth as fbAuth } from "@/lib/firebase";
 import { meetingsStore } from "@/stores";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
-  head: () => ({ meta: [{ title: "Home — skillnests.in" }] }),
+  head: () => ({ meta: [{ title: " - SkillNests" }] }),
   component: Dashboard,
 });
 

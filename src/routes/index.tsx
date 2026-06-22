@@ -8,7 +8,7 @@ export const Route = createFileRoute("/")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "skillnests.in — Education that completes, not competes" },
+      { title: "SkillNests - Education that completes, not competes" },
       { name: "description", content: "A holistic learning nest for Gen Z." },
     ],
   }),

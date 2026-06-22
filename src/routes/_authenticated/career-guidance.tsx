@@ -17,7 +17,7 @@ function normalizeUrl(url: string): string {
 
 export const Route = createFileRoute("/_authenticated/career-guidance")({
   ssr: false,
-  head: () => ({ meta: [{ title: "Career Guidance — skillnests.in" }] }),
+  head: () => ({ meta: [{ title: " - SkillNests" }] }),
   component: CareerPage,
 });
 

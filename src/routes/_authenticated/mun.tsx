@@ -9,7 +9,7 @@ import { PaidPageGate } from "@/components/PaidGate";
 
 export const Route = createFileRoute("/_authenticated/mun")({
   ssr: false,
-  head: () => ({ meta: [{ title: "MUN — skillnests.in" }] }),
+  head: () => ({ meta: [{ title: " - SkillNests" }] }),
   component: MunPage,
 });
 

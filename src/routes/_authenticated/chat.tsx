@@ -10,7 +10,7 @@ import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/chat")({
   ssr: false,
-  head: () => ({ meta: [{ title: "Chat — skillnests.in" }] }),
+  head: () => ({ meta: [{ title: " - SkillNests" }] }),
   component: ChatPage,
 });
 

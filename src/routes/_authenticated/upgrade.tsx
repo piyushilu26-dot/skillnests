@@ -20,7 +20,7 @@ import { db } from "@/lib/firebase";
 
 export const Route = createFileRoute("/_authenticated/upgrade")({
   ssr: false,
-  head: () => ({ meta: [{ title: "Unlock — skillnests.in" }] }),
+  head: () => ({ meta: [{ title: " - SkillNests" }] }),
   component: UpgradePage,
 });
 

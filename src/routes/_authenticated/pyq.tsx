@@ -12,7 +12,7 @@ import { isDriveUrl } from "@/lib/drive";
 
 export const Route = createFileRoute("/_authenticated/pyq")({
   ssr: false,
-  head: () => ({ meta: [{ title: "PYQ — skillnests.in" }] }),
+  head: () => ({ meta: [{ title: " - SkillNests" }] }),
   component: PYQPage,
 });
 

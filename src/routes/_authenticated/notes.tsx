@@ -12,7 +12,7 @@ import { isDriveUrl } from "@/lib/drive";
 
 export const Route = createFileRoute("/_authenticated/notes")({
   ssr: false,
-  head: () => ({ meta: [{ title: "Notes — skillnests.in" }] }),
+  head: () => ({ meta: [{ title: " - SkillNests" }] }),
   component: NotesPage,
 });
 
