@@ -296,16 +296,23 @@ function PaidStatsSection() {
                   <div className="text-sm font-medium">{u.name || "Unknown"}</div>
                   <div className="text-xs text-muted-foreground">{u.email}</div>
                 </div>
-                {u.paidUntil && new Date(u.paidUntil).getTime() > Date.now() && (
-                  <div className="text-xs font-mono text-rose-gold">
-                    Active until {new Date(u.paidUntil).toLocaleDateString()}
-                  </div>
-                )}
-                {u.paidUntil && new Date(u.paidUntil).getTime() <= Date.now() && new Date(u.paidUntil).getTime() > 0 && (
-                  <div className="text-xs font-mono text-muted-foreground">
-                    Expired {new Date(u.paidUntil).toLocaleDateString()}
-                  </div>
-                )}
+                <div className="flex flex-col items-end gap-1">
+                  {u.paidUntil && new Date(u.paidUntil).getTime() > Date.now() && (
+                    <div className="text-xs font-mono text-rose-gold">
+                      Active until {new Date(u.paidUntil).toLocaleDateString()}
+                    </div>
+                  )}
+                  {u.paidUntil && new Date(u.paidUntil).getTime() <= Date.now() && new Date(u.paidUntil).getTime() > 0 && (
+                    <div className="text-xs font-mono text-muted-foreground">
+                      Expired {new Date(u.paidUntil).toLocaleDateString()}
+                    </div>
+                  )}
+                  {viewing === "paid" ? (
+                    <button onClick={() => { setUserPaid(u.uid, false); toast.success("Revoked " + u.email); }} className="text-[10px] uppercase font-mono tracking-widest text-muted-foreground hover:text-crimson transition">Revoke</button>
+                  ) : (
+                    <button onClick={() => { setUserPaid(u.uid, true); toast.success("Unlocked " + u.email); }} className="text-[10px] uppercase font-mono tracking-widest text-muted-foreground hover:text-rose-gold transition">Unlock</button>
+                  )}
+                </div>
               </div>
             ))}
           </div>

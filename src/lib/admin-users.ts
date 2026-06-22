@@ -2,10 +2,10 @@ import { collection, doc, getDoc, getDocs, onSnapshot, query, setDoc, where } fr
 import { db } from "./firebase";
 import { ADMIN_EMAIL, FREE_EMAILS } from "./auth";
 
-export type PaidUserMeta = { email: string; name?: string; paidUntil?: string };
+export type PaidUserMeta = { uid: string; email: string; name?: string; paidUntil?: string };
 export type PaidStats = { paid: number; total: number; paidUsers: PaidUserMeta[]; freeUsers: PaidUserMeta[] };
 
-function computeStats(docs: { email?: string; paidUntil?: string; displayName?: string }[]): PaidStats {
+function computeStats(docs: { id: string; data: { email?: string; paidUntil?: string; displayName?: string } }[]): PaidStats {
   const excluded = new Set<string>([ADMIN_EMAIL, ...FREE_EMAILS].map((e) => e.toLowerCase()));
   const now = Date.now();
   let paid = 0;
@@ -13,11 +13,11 @@ function computeStats(docs: { email?: string; paidUntil?: string; displayName?: 
   const paidUsers: PaidUserMeta[] = [];
   const freeUsers: PaidUserMeta[] = [];
   for (const d of docs) {
-    const email = (d.email || "").toLowerCase();
+    const email = (d.data.email || "").toLowerCase();
     if (!email || excluded.has(email)) continue;
     total += 1;
-    const until = typeof d.paidUntil === "string" ? new Date(d.paidUntil).getTime() : 0;
-    const u: PaidUserMeta = { email: d.email || "", name: d.displayName, paidUntil: d.paidUntil };
+    const until = typeof d.data.paidUntil === "string" ? new Date(d.data.paidUntil).getTime() : 0;
+    const u: PaidUserMeta = { uid: d.id, email: d.data.email || "", name: d.data.displayName, paidUntil: d.data.paidUntil };
     if (until > now) {
       paid += 1;
       paidUsers.push(u);
@@ -30,13 +30,13 @@ function computeStats(docs: { email?: string; paidUntil?: string; displayName?: 
 
 export async function getPaidStats(): Promise<PaidStats> {
   const snap = await getDocs(collection(db, "users"));
-  return computeStats(snap.docs.map((d) => d.data() as { email?: string; paidUntil?: string }));
+  return computeStats(snap.docs.map((d) => ({ id: d.id, data: d.data() as any })));
 }
 
 /** Realtime subscription — fires immediately and on every users-collection change. */
 export function subscribePaidStats(cb: (s: PaidStats) => void): () => void {
   return onSnapshot(collection(db, "users"), (snap) => {
-    cb(computeStats(snap.docs.map((d) => d.data() as { email?: string; paidUntil?: string; displayName?: string })));
+    cb(computeStats(snap.docs.map((d) => ({ id: d.id, data: d.data() as any }))));
   });
 }
 
