@@ -44,17 +44,25 @@ export function createLocalStore<T extends WithId[]>(
         const user = authApi.current();
         if (!user) return;
         const ref = buildQuery ? buildQuery(collection(db, collectionName), user) : collection(db, collectionName);
-        let isFirstSnapshot = true;
+        const storageKey = `sn-seen-ids-${collectionName}`;
+        const stored = localStorage.getItem(storageKey);
+        // If stored is null, it's the first time visiting on this device. We don't want a toast storm of everything ever created.
+        let seenIds = stored ? new Set<string>(JSON.parse(stored)) : null;
+
         unsub = onSnapshot(ref, (snap) => {
           const next = snap.docs.map((d) => ({ id: d.id, ...(d.data() as object) })) as unknown as T;
           
-          if (!isFirstSnapshot && notifyName && !user.isAdmin) {
-            const added = next.filter((n) => !cache.find((c) => c.id === n.id));
-            if (added.length > 0) {
-              toast(`Oh! The Admin added something in ${notifyName}, check it out!`, { icon: "✨" });
+          if (notifyName && !user.isAdmin) {
+            if (seenIds) {
+              const added = next.filter((n) => !seenIds!.has(n.id));
+              if (added.length > 0) {
+                toast(`Oh! The Admin added something in ${notifyName}, check it out!`, { icon: "✨" });
+              }
             }
+            
+            seenIds = new Set(next.map((n) => n.id));
+            localStorage.setItem(storageKey, JSON.stringify(Array.from(seenIds)));
           }
-          isFirstSnapshot = false;
 
           cache = next;
           listeners.forEach((l) => l());
