@@ -29,7 +29,7 @@ export function Navbar() {
   useEffect(() => {
     const on = () => setScrolled(window.scrollY > 20);
     on();
-    window.addEventListener("scroll", on);
+    window.addEventListener("scroll", on, { passive: true });
     return () => window.removeEventListener("scroll", on);
   }, []);
 
