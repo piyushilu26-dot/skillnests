@@ -3,7 +3,8 @@ import { Navbar } from "@/components/site/Navbar";
 import { useAuth } from "@/lib/auth";
 import { useEffect, useState } from "react";
 import { BarChart3, BookOpen, Calendar, Code2, Compass, FileText, Inbox, Trophy, Users, Video, IndianRupee, CheckCircle2, XCircle, Smartphone, Search } from "lucide-react";
-import { pyqStore, notesStore, meetingsStore, scheduleStore, skillStore, codingStore, founderInboxStore, careerVideoStore, careerLiveStore, paymentRequestsStore, munStore, olympiadStore } from "@/stores";
+import { pyqStore, notesStore, meetingsStore, scheduleStore, skillStore, codingStore, founderInboxStore, careerVideoStore, careerLiveStore, paymentRequestsStore, munStore, olympiadStore, noticeStore } from "@/stores";
+import { uid } from "@/lib/local-store";
 import { findUserByEmail, setUserPaid, resetUserDevices, getUser, subscribePaidStats, deleteUserDoc, type AdminUserRow, type PaidStats } from "@/lib/admin-users";
 import { toast } from "sonner";
 
@@ -28,6 +29,7 @@ function AdminPage() {
   const careerLiveCount = careerLiveStore.use().length;
   const munCount = munStore.use().length;
   const olympiadCount = olympiadStore.use().length;
+  const noticeCount = noticeStore.use().length;
 
   if (!isAdmin) return null;
 
@@ -41,6 +43,7 @@ function AdminPage() {
     { to: "/coding-campus", icon: Code2, title: "Coding", count: codingCount, desc: "Workshops." },
     { to: "/mun", icon: BarChart3, title: "MUN", count: munCount, desc: "Topics & blocs." },
     { to: "/olympiads", icon: Trophy, title: "Olympiads", count: olympiadCount, desc: "Subjects & resources." },
+    { to: "#notices", icon: FileText, title: "Notices", count: noticeCount, desc: "Dashboard announcements." },
   ];
 
   return (
@@ -55,7 +58,17 @@ function AdminPage() {
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-12">
           {tiles.map((t) => (
-            <Link key={t.to} to={t.to as any} className="glass-strong rounded-2xl p-5 hover:border-rose-gold/40 transition group">
+            t.to.startsWith("#") ? (
+              <a key={t.title} href={t.to} className="glass-strong rounded-2xl p-5 hover:border-rose-gold/40 transition group block">
+                <div className="flex items-center justify-between mb-3">
+                  <t.icon className="w-5 h-5 text-rose-gold" strokeWidth={1.2} />
+                  <span className="text-2xl font-serif">{t.count}</span>
+                </div>
+                <div className="font-serif text-lg">{t.title}</div>
+                <div className="text-xs text-muted-foreground">{t.desc}</div>
+              </a>
+            ) : (
+            <Link key={t.to} to={t.to as any} className="glass-strong rounded-2xl p-5 hover:border-rose-gold/40 transition group block">
               <div className="flex items-center justify-between mb-3">
                 <t.icon className="w-5 h-5 text-rose-gold" strokeWidth={1.2} />
                 <span className="text-2xl font-serif">{t.count}</span>
@@ -63,11 +76,13 @@ function AdminPage() {
               <div className="font-serif text-lg">{t.title}</div>
               <div className="text-xs text-muted-foreground">{t.desc}</div>
             </Link>
+            )
           ))}
         </div>
 
         <PaidStatsSection />
         <PaymentRequestsSection />
+        <NoticesSection />
         <MembersSection />
         <FounderInboxSection />
       </div>
@@ -230,6 +245,55 @@ function FounderInboxSection() {
               <span className="ml-auto text-[10px] font-mono text-muted-foreground">{new Date(m.at).toLocaleString()}</span>
             </div>
             <p className="text-sm text-foreground/80 leading-relaxed whitespace-pre-wrap">{m.body}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function NoticesSection() {
+  const notices = noticeStore.use();
+  
+  function addNotice() {
+    const title = prompt("Notice Title:");
+    if (!title) return;
+    const body = prompt("Notice Body:");
+    if (!body) return;
+    noticeStore.update(p => [
+      { id: uid(), title, body, authorName: "Admin", createdAt: new Date().toISOString() },
+      ...p
+    ]);
+    toast.success("Notice added successfully.");
+  }
+  
+  return (
+    <section id="notices" className="mb-12 scroll-mt-32">
+      <div className="flex items-center gap-2 mb-4">
+        <FileText className="w-5 h-5 text-rose-gold" strokeWidth={1.2} />
+        <h2 className="font-serif text-2xl">Notice Board</h2>
+        <button onClick={addNotice} className="ml-auto btn-phoenix rounded-full px-4 py-1.5 text-xs">Add Notice</button>
+      </div>
+      <div className="space-y-3">
+        {notices.length === 0 && <div className="glass rounded-2xl p-8 text-center text-sm text-muted-foreground">No notices yet.</div>}
+        {[...notices].sort((a,b) => b.createdAt.localeCompare(a.createdAt)).map((n) => (
+          <div key={n.id} className="glass rounded-2xl p-4 flex flex-wrap gap-4 items-start">
+            <div className="flex-1">
+              <div className="font-serif text-lg">{n.title}</div>
+              <div className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap">{n.body}</div>
+              <div className="text-[10px] font-mono text-muted-foreground mt-2">{new Date(n.createdAt).toLocaleString()}</div>
+            </div>
+            <button 
+              onClick={() => {
+                if (confirm("Delete this notice?")) {
+                  noticeStore.update(p => p.filter(x => x.id !== n.id));
+                  toast.success("Notice deleted.");
+                }
+              }} 
+              className="text-xs text-crimson border border-crimson/30 hover:bg-crimson/10 px-3 py-1.5 rounded-full transition"
+            >
+              Delete
+            </button>
           </div>
         ))}
       </div>
