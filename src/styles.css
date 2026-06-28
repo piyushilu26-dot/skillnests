@@ -161,18 +161,6 @@ html, body { background: var(--background); color: var(--foreground); }
     transform: translateZ(0);
     animation: aurora-drift 22s ease-in-out infinite alternate;
   }
-  body::after {
-    content: "";
-    position: fixed;
-    inset: 0;
-    pointer-events: none;
-    z-index: 0;
-    opacity: 0.35;
-    mix-blend-mode: overlay;
-    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.6  0 0 0 0 0.4  0 0 0 0 0.3  0 0 0 0.5 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
-    will-change: transform;
-    transform: translateZ(0);
-  }
   #root { position: relative; z-index: 1; }
   h1, h2, h3, .font-serif { font-family: var(--font-serif); letter-spacing: -0.01em; }
   ::selection { background: var(--rose-gold); color: #1a0a0a; }
@@ -180,8 +168,14 @@ html, body { background: var(--background); color: var(--foreground); }
 
 @keyframes aurora-drift {
   0%   { transform: translate3d(0, 0, 0) scale(1); }
-  50%  { transform: translate3d(-3%, 2%, 0) scale(1.08); }
-  100% { transform: translate3d(2%, -2%, 0) scale(1.04); }
+  50%  { transform: translate3d(-2%, 1%, 0) scale(1.04); }
+  100% { transform: translate3d(1%, -1%, 0) scale(1.02); }
+}
+
+@media (max-width: 768px) {
+  body::before {
+    animation: none !important;
+  }
 }
 
 
