@@ -3,9 +3,10 @@ import { Navbar } from "@/components/site/Navbar";
 import { useAuth } from "@/lib/auth";
 import { useState } from "react";
 import { CheckCircle2, Circle, Plus, Trash2, TrendingUp, Trophy, Clock, X } from "lucide-react";
-import { userProgressStore } from "@/stores";
+import { userProgressStore, grantXP } from "@/stores";
 import { uid } from "@/lib/local-store";
 import { motion, AnimatePresence } from "framer-motion";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/progress")({
   ssr: false,
@@ -46,10 +47,17 @@ function ProgressPage() {
     setDraftGoal("");
     setDraftTime("");
     setIsModalOpen(false);
+    
+    grantXP(user, 5);
+    toast.success("Goal added! +5 XP 🚀");
   }
 
   function toggleGoal(id: string, currentlyCompleted: boolean) {
     userProgressStore.update(p => p.map(g => g.id === id ? { ...g, completed: !currentlyCompleted } : g));
+    if (!currentlyCompleted && user) {
+      grantXP(user, 10);
+      toast.success("Goal completed! +10 XP 🎉");
+    }
   }
 
   function deleteGoal(id: string) {

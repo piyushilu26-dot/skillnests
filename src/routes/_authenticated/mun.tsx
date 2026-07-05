@@ -2,10 +2,11 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Navbar } from "@/components/site/Navbar";
 import { useAuth } from "@/lib/auth";
 import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { Gavel, Brain, Plus, Trash2, FileText, MessageSquare, Send } from "lucide-react";
-import { munStore, munDebateStore, munCommentStore, type MunItem, type MunDebate, type MunComment } from "@/stores";
+import { munStore, munDebateStore, munCommentStore, grantXP, type MunItem, type MunDebate, type MunComment } from "@/stores";
 import { uid } from "@/lib/local-store";
+import { toast } from "sonner";
 
 
 export const Route = createFileRoute("/_authenticated/mun")({
@@ -80,6 +81,9 @@ function DebateForm({ user }: { user: any }) {
       createdAt: new Date().toISOString()
     }, ...p]);
     setDraft({ topic: "", body: "" });
+    
+    grantXP(user, 15);
+    toast.success("Debate posted! +15 XP 🗣️");
   }
 
   return (

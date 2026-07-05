@@ -1,7 +1,7 @@
 // All app data lives in Firestore via createLocalStore (Firebase-backed).
 
 import { createLocalStore } from "@/lib/local-store";
-import { query, where, or } from "firebase/firestore";
+import { query, where, or, orderBy, limit } from "firebase/firestore";
 
 /* ---------------- PYQ ---------------- */
 export type PYQStream = "boards" | "jee" | "neet";
@@ -195,3 +195,45 @@ export type DailyGoal = {
   createdAt: string;
 };
 export const userProgressStore = createLocalStore<DailyGoal[]>("sn-progress", [], (col, user) => query(col, where("userId", "==", user.uid)));
+
+/* ---------------- Gamification & XP ---------------- */
+export type GamificationProfile = {
+  id: string; // userId
+  name: string;
+  xp: number;
+  level: number;
+  updatedAt: string;
+};
+
+// Fetch top 100 users for the leaderboard.
+export const gamificationStore = createLocalStore<GamificationProfile[]>(
+  "sn-gamification", 
+  [], 
+  (col) => query(col, orderBy("xp", "desc"), limit(100))
+);
+
+export function grantXP(user: { uid: string; name: string }, amount: number) {
+  gamificationStore.update(profiles => {
+    const existing = profiles.find(p => p.id === user.uid);
+    const newXP = (existing?.xp || 0) + amount;
+    const newLevel = Math.floor(newXP / 100) + 1; // 0-99 XP = Level 1, 100-199 XP = Level 2, etc.
+
+    if (existing) {
+      return profiles.map(p => p.id === user.uid ? { 
+        ...p, 
+        xp: newXP, 
+        level: newLevel,
+        name: user.name, // always keep name up to date
+        updatedAt: new Date().toISOString() 
+      } : p);
+    } else {
+      return [...profiles, {
+        id: user.uid,
+        name: user.name,
+        xp: newXP,
+        level: newLevel,
+        updatedAt: new Date().toISOString()
+      }];
+    }
+  });
+}

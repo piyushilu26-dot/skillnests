@@ -3,7 +3,7 @@ import { Navbar } from "@/components/site/Navbar";
 import { useAuth } from "@/lib/auth";
 import { useState } from "react";
 import { Plus, Trash2, Video, ExternalLink, Code2, Users, MonitorPlay } from "lucide-react";
-import { skillStore, codingStore } from "@/stores";
+import { skillStore, codingStore, grantXP } from "@/stores";
 import { uid } from "@/lib/local-store";
 import { toast } from "sonner";
 import { PaidGate } from "@/components/PaidGate";
@@ -34,7 +34,8 @@ function SkillSharePage() {
     skillStore.update((prev) => [{ id: uid(), authorEmail: user.email, authorName: user.name, title: draftSkill.title.trim(), body: draftSkill.body.trim(), videoUrl: draftSkill.videoUrl.trim() || undefined, classUrl: draftSkill.classUrl.trim() || undefined, createdAt: new Date().toISOString() }, ...prev]);
     setDraftSkill({ title: "", body: "", videoUrl: "", classUrl: "" });
     setShowSkillForm(false);
-    toast.success("Posted to skill share.");
+    grantXP(user, 20);
+    toast.success("Skill posted! +20 XP 🚀");
   }
 
   function removeSkill(id: string, authorEmail: string) {
