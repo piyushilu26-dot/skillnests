@@ -190,6 +190,7 @@ export type DailyGoal = {
   userId: string;
   date: string; // YYYY-MM-DD
   task: string;
+  timeLimit?: string;
   completed: boolean;
   createdAt: string;
 };

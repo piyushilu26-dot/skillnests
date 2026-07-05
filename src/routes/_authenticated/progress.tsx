@@ -1,11 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Navbar } from "@/components/site/Navbar";
 import { useAuth } from "@/lib/auth";
-import { useState, useEffect } from "react";
-import { CheckCircle2, Circle, Plus, Trash2, TrendingUp, Trophy } from "lucide-react";
+import { useState } from "react";
+import { CheckCircle2, Circle, Plus, Trash2, TrendingUp, Trophy, Clock, X } from "lucide-react";
 import { userProgressStore } from "@/stores";
 import { uid } from "@/lib/local-store";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 
 export const Route = createFileRoute("/_authenticated/progress")({
   ssr: false,
@@ -17,6 +17,9 @@ function ProgressPage() {
   const goals = userProgressStore.use();
   
   const [draftGoal, setDraftGoal] = useState("");
+  const [draftTime, setDraftTime] = useState("");
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  
   // Calculate todayStr synchronously
   const d = new Date();
   const todayStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
@@ -36,10 +39,13 @@ function ProgressPage() {
       userId: user.uid,
       date: todayStr,
       task: draftGoal.trim(),
+      timeLimit: draftTime.trim() || undefined,
       completed: false,
       createdAt: new Date().toISOString()
     }, ...p]);
     setDraftGoal("");
+    setDraftTime("");
+    setIsModalOpen(false);
   }
 
   function toggleGoal(id: string, currentlyCompleted: boolean) {
@@ -86,18 +92,15 @@ function ProgressPage() {
         </div>
 
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-          <h2 className="font-serif text-2xl mb-4">Daily Study Checklist</h2>
-          <form onSubmit={addGoal} className="relative mb-6">
-            <input 
-              value={draftGoal}
-              onChange={e => setDraftGoal(e.target.value)}
-              placeholder="What do you want to accomplish today?"
-              className="w-full glass-strong rounded-full pl-6 pr-14 py-4 text-sm bg-transparent outline-none focus:border-rose-gold/40 transition"
-            />
-            <button type="submit" className="absolute right-2 top-2 bottom-2 aspect-square rounded-full bg-rose-gold/10 hover:bg-rose-gold text-rose-gold hover:text-white transition flex items-center justify-center">
-              <Plus className="w-5 h-5" />
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="font-serif text-2xl">Daily Study Checklist</h2>
+            <button 
+              onClick={() => setIsModalOpen(true)}
+              className="btn-phoenix rounded-full px-5 py-2.5 text-sm flex items-center gap-2"
+            >
+              <Plus className="w-4 h-4" /> Add Goal
             </button>
-          </form>
+          </div>
 
           <div className="space-y-3">
             {todayGoals.length === 0 ? (
@@ -114,7 +117,12 @@ function ProgressPage() {
                     {g.completed ? <CheckCircle2 className="w-6 h-6" /> : <Circle className="w-6 h-6" />}
                   </button>
                   <div className={`flex-1 text-sm transition-all ${g.completed ? 'text-muted-foreground line-through' : 'text-foreground/90'}`}>
-                    {g.task}
+                    <div>{g.task}</div>
+                    {g.timeLimit && (
+                      <div className="inline-flex items-center gap-1 mt-1 text-[11px] font-mono uppercase tracking-widest text-rose-gold bg-rose-gold/10 px-2 py-0.5 rounded-full">
+                        <Clock className="w-3 h-3" /> {g.timeLimit}
+                      </div>
+                    )}
                   </div>
                   <button 
                     onClick={() => deleteGoal(g.id)}
@@ -128,6 +136,62 @@ function ProgressPage() {
           </div>
         </motion.div>
       </div>
+
+      {/* Goal Modal */}
+      <AnimatePresence>
+        {isModalOpen && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm"
+          >
+            <motion.div 
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="glass-strong rounded-3xl w-full max-w-md p-6 relative overflow-hidden"
+            >
+              <button 
+                onClick={() => setIsModalOpen(false)}
+                className="absolute top-4 right-4 p-2 text-muted-foreground hover:text-foreground transition rounded-full hover:bg-white/5"
+              >
+                <X className="w-5 h-5" />
+              </button>
+              
+              <h3 className="font-serif text-2xl mb-2 text-gradient-gold">Set a New Goal</h3>
+              <p className="text-sm text-muted-foreground mb-6">What do you want to accomplish today?</p>
+              
+              <form onSubmit={addGoal} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-mono uppercase tracking-widest text-muted-foreground mb-2 ml-1">Task Description</label>
+                  <input 
+                    value={draftGoal}
+                    onChange={e => setDraftGoal(e.target.value)}
+                    placeholder="e.g., Complete Math Chapter 4"
+                    className="w-full glass rounded-xl px-4 py-3 text-sm bg-transparent outline-none focus:border-rose-gold/40 transition"
+                    autoFocus
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-mono uppercase tracking-widest text-muted-foreground mb-2 ml-1">Time Limit <span className="opacity-50">(Optional)</span></label>
+                  <input 
+                    value={draftTime}
+                    onChange={e => setDraftTime(e.target.value)}
+                    placeholder="e.g., 30 mins, 2 hours"
+                    className="w-full glass rounded-xl px-4 py-3 text-sm bg-transparent outline-none focus:border-rose-gold/40 transition"
+                  />
+                </div>
+                <div className="pt-2">
+                  <button type="submit" disabled={!draftGoal.trim()} className="w-full btn-phoenix rounded-xl py-3 text-sm flex items-center justify-center gap-2 disabled:opacity-50 transition">
+                    <Plus className="w-4 h-4" /> Save Goal
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </main>
   );
 }
