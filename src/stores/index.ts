@@ -155,31 +155,36 @@ export type MunDebate = {
   authorEmail: string;
   authorName: string;
   body: string;
+  mediaUrl?: string;
+  mediaType?: "image" | "video" | "link";
   createdAt: string;
 };
-export const munDebateStore = createLocalStore<MunDebate[]>("sn-mun-debates", [], undefined, "MUN Debates");
+export const munDebateStore = createLocalStore<MunDebate[]>("sn-mun-debates", []);
 
-export type MunComment = {
+export interface MunComment {
   id: string;
   debateId: string;
   authorName: string;
   authorEmail: string;
   content: string;
+  mediaUrl?: string;
+  mediaType?: "image" | "video" | "link";
   createdAt: string;
-};
+}
 export const munCommentStore = createLocalStore<MunComment[]>("sn-mun-comments", []);
 
 /* ---------------- Extra Section (Dynamic) ---------------- */
 export type ExtraConfig = {
   id: string;
   name: string;
+  location?: "toolbar" | "dropdown";
 };
 export const extraConfigStore = createLocalStore<ExtraConfig[]>("sn-extra-config", []);
 
 export type ExtraContent = {
   id: string;
-  type: "text" | "image" | "pdf";
-  content: string; // URL for image/pdf, text body for text
+  type: "text" | "image" | "pdf" | "video";
+  content: string; // URL for image/pdf/video, text body for text
   createdAt: string;
 };
 export const extraContentStore = createLocalStore<ExtraContent[]>("sn-extra-content", [], undefined, "Extra Resources");

@@ -1,10 +1,11 @@
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate, useLocation } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { Menu, X, LayoutDashboard, LogOut, User as UserIcon, Shield, MessageSquare, Calendar, TrendingUp } from "lucide-react";
+import { Menu, X, LayoutDashboard, LogOut, User as UserIcon, Shield, MessageSquare, Calendar, TrendingUp, Trophy } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import logoAsset from "@/assets/skillnestslogo.jpeg";
 import { ThemeToggle } from "./ThemeToggle";
 import { useAuth } from "@/lib/auth";
+import { extraConfigStore } from "@/stores";
 
 const links: { label: string; to: string }[] = [
   { label: "Progress", to: "/progress" },
@@ -27,6 +28,9 @@ export function Navbar() {
   const menuRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const { user, isAdmin, signOut } = useAuth();
+  const extraConfig = extraConfigStore.use()[0];
+  const extraName = extraConfig?.name || "Resources";
+  const extraLocation = extraConfig?.location || "dropdown";
 
   useEffect(() => {
     const on = () => setScrolled(window.scrollY > 20);
@@ -78,6 +82,15 @@ export function Navbar() {
                 {l.label}
               </Link>
             ))}
+            {extraLocation === "toolbar" && (
+              <Link
+                to="/extra"
+                activeProps={{ className: "text-rose-gold" }}
+                className="text-sm text-muted-foreground hover:text-rose-gold transition-colors"
+              >
+                {extraName}
+              </Link>
+            )}
           </div>
 
           <div className="hidden md:flex items-center gap-3">
@@ -113,6 +126,9 @@ export function Navbar() {
                       <MenuItem to="/schedule" icon={<Calendar className="w-4 h-4" />} onClick={() => setMenuOpen(false)}>Schedule</MenuItem>
                       <MenuItem to="/founder" icon={<UserIcon className="w-4 h-4" />} onClick={() => setMenuOpen(false)}>Founder</MenuItem>
                       <MenuItem to="/progress" icon={<TrendingUp className="w-4 h-4" />} onClick={() => setMenuOpen(false)}>Progress</MenuItem>
+                      {extraLocation === "dropdown" && (
+                        <MenuItem to="/extra" icon={<Trophy className="w-4 h-4" />} onClick={() => setMenuOpen(false)}>{extraName}</MenuItem>
+                      )}
                       {isAdmin && (
                         <MenuItem to="/admin" icon={<Shield className="w-4 h-4 text-rose-gold" />} onClick={() => setMenuOpen(false)}>
                           <span className="text-rose-gold">Admin</span>
@@ -149,6 +165,9 @@ export function Navbar() {
               {links.map((l) => (
                 <Link key={l.to} to={l.to as any} onClick={() => setOpen(false)} className="text-foreground/90 py-1 text-sm">{l.label}</Link>
               ))}
+              {extraLocation === "toolbar" && (
+                <Link to="/extra" onClick={() => setOpen(false)} className="text-foreground/90 py-1 text-sm">{extraName}</Link>
+              )}
               <Link to="/dashboard" onClick={() => setOpen(false)} className="text-foreground/90 py-1 text-sm col-span-2 border-t border-white/10 pt-3">Dashboard</Link>
               {user && (
                 <button onClick={handleSignOut} className="text-left text-rose-gold py-1 text-sm col-span-2">Sign out</button>

@@ -3,7 +3,7 @@ import { Navbar } from "@/components/site/Navbar";
 import { useAuth } from "@/lib/auth";
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Gavel, Brain, Plus, Trash2, FileText, MessageSquare, Send } from "lucide-react";
+import { Gavel, Brain, Plus, Trash2, FileText, MessageSquare, Send, Image as ImageIcon, Video as VideoIcon, Link as LinkIcon } from "lucide-react";
 import { munStore, munDebateStore, munCommentStore, grantXP, type MunItem, type MunDebate, type MunComment } from "@/stores";
 import { uid } from "@/lib/local-store";
 import { toast } from "sonner";
@@ -67,7 +67,8 @@ function MunPage() {
 }
 
 function DebateForm({ user }: { user: any }) {
-  const [draft, setDraft] = useState({ topic: "", body: "" });
+  const [draft, setDraft] = useState({ topic: "", body: "", mediaUrl: "", mediaType: "image" as "image" | "video" | "link" });
+  const [showMedia, setShowMedia] = useState(false);
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -78,9 +79,12 @@ function DebateForm({ user }: { user: any }) {
       body: draft.body.trim(),
       authorEmail: user.email,
       authorName: user.name,
+      mediaUrl: draft.mediaUrl.trim() || undefined,
+      mediaType: draft.mediaUrl.trim() ? draft.mediaType : undefined,
       createdAt: new Date().toISOString()
     }, ...p]);
-    setDraft({ topic: "", body: "" });
+    setDraft({ topic: "", body: "", mediaUrl: "", mediaType: "image" });
+    setShowMedia(false);
     
     grantXP(user, 15);
     toast.success("Debate posted! +15 XP 🗣️");
@@ -103,7 +107,31 @@ function DebateForm({ user }: { user: any }) {
           rows={4} 
           className="w-full glass rounded-xl px-4 py-3 text-sm bg-transparent outline-none resize-none" 
         />
-        <div className="flex justify-end">
+        
+        {showMedia && (
+          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="flex gap-2">
+            <select 
+              value={draft.mediaType} 
+              onChange={e => setDraft(d => ({ ...d, mediaType: e.target.value as any }))}
+              className="glass rounded-xl px-3 py-2 text-sm bg-transparent outline-none"
+            >
+              <option value="image">Image</option>
+              <option value="video">Video</option>
+              <option value="link">Link</option>
+            </select>
+            <input 
+              value={draft.mediaUrl}
+              onChange={e => setDraft(d => ({ ...d, mediaUrl: e.target.value }))}
+              placeholder="Paste URL here..."
+              className="flex-1 glass rounded-xl px-4 py-2 text-sm bg-transparent outline-none"
+            />
+          </motion.div>
+        )}
+
+        <div className="flex justify-between items-center mt-2">
+          <button type="button" onClick={() => setShowMedia(!showMedia)} className="text-xs text-muted-foreground hover:text-rose-gold transition flex items-center gap-1">
+            <ImageIcon className="w-3.5 h-3.5" /> Add Media
+          </button>
           <button type="submit" className="btn-phoenix rounded-full px-6 py-2.5 text-sm flex items-center gap-2">
             <MessageSquare className="w-4 h-4" /> Post Article
           </button>
@@ -143,6 +171,8 @@ function DebateList({ debates, comments, isAdmin, isPaid, user }: { debates: Mun
             <div className="font-serif text-2xl mb-3">{d.topic}</div>
             <div className="text-sm text-foreground/80 leading-relaxed whitespace-pre-wrap">{d.body}</div>
             
+            {d.mediaUrl && <MediaRender url={d.mediaUrl} type={d.mediaType || "link"} />}
+            
             {/* Comments Section */}
             <div className="mt-6 pt-4 border-t border-white/5">
               <div className="text-xs font-mono uppercase tracking-widest text-muted-foreground mb-4">Discussion ({topicComments.length})</div>
@@ -164,6 +194,7 @@ function DebateList({ debates, comments, isAdmin, isPaid, user }: { debates: Mun
                       <div className="text-[10px] font-mono text-muted-foreground">{new Date(c.createdAt).toLocaleString()}</div>
                     </div>
                     <div className="text-foreground/90 whitespace-pre-wrap">{c.content}</div>
+                    {c.mediaUrl && <MediaRender url={c.mediaUrl} type={c.mediaType || "link"} small />}
                   </div>
                 ))}
               </div>
@@ -185,6 +216,9 @@ function DebateList({ debates, comments, isAdmin, isPaid, user }: { debates: Mun
 
 function CommentForm({ debateId, user }: { debateId: string; user: any }) {
   const [content, setContent] = useState("");
+  const [mediaUrl, setMediaUrl] = useState("");
+  const [mediaType, setMediaType] = useState<"image" | "video" | "link">("image");
+  const [showMedia, setShowMedia] = useState(false);
   
   function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -195,23 +229,92 @@ function CommentForm({ debateId, user }: { debateId: string; user: any }) {
       authorName: user.name,
       authorEmail: user.email,
       content: content.trim(),
+      mediaUrl: mediaUrl.trim() || undefined,
+      mediaType: mediaUrl.trim() ? mediaType : undefined,
       createdAt: new Date().toISOString()
     }]);
     setContent("");
+    setMediaUrl("");
+    setShowMedia(false);
   }
   
   return (
-    <form onSubmit={submit} className="flex gap-2">
-      <input 
-        value={content}
-        onChange={e => setContent(e.target.value)}
-        placeholder="Add to the discussion..."
-        className="flex-1 glass rounded-xl px-4 py-2 text-sm bg-transparent outline-none focus:border-rose-gold/40 transition"
-      />
-      <button type="submit" disabled={!content.trim()} className="btn-phoenix rounded-xl px-4 py-2 flex items-center justify-center disabled:opacity-50 transition">
-        <Send className="w-4 h-4" />
-      </button>
+    <form onSubmit={submit} className="flex flex-col gap-2">
+      <div className="flex gap-2">
+        <input 
+          value={content}
+          onChange={e => setContent(e.target.value)}
+          placeholder="Add to the discussion..."
+          className="flex-1 glass rounded-xl px-4 py-2 text-sm bg-transparent outline-none focus:border-rose-gold/40 transition"
+        />
+        <button type="button" onClick={() => setShowMedia(!showMedia)} className={`p-2 rounded-xl transition ${showMedia ? "bg-rose-gold/20 text-rose-gold" : "glass hover:text-rose-gold text-muted-foreground"}`}>
+          <ImageIcon className="w-4 h-4" />
+        </button>
+        <button type="submit" disabled={!content.trim()} className="btn-phoenix rounded-xl px-4 py-2 flex items-center justify-center disabled:opacity-50 transition">
+          <Send className="w-4 h-4" />
+        </button>
+      </div>
+      
+      {showMedia && (
+        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="flex gap-2">
+          <select 
+            value={mediaType} 
+            onChange={e => setMediaType(e.target.value as any)}
+            className="glass rounded-xl px-3 py-1.5 text-xs bg-transparent outline-none"
+          >
+            <option value="image">Image</option>
+            <option value="video">Video</option>
+            <option value="link">Link</option>
+          </select>
+          <input 
+            value={mediaUrl}
+            onChange={e => setMediaUrl(e.target.value)}
+            placeholder="Paste media or link URL..."
+            className="flex-1 glass rounded-xl px-3 py-1.5 text-xs bg-transparent outline-none"
+          />
+        </motion.div>
+      )}
     </form>
+  );
+}
+
+function MediaRender({ url, type, small = false }: { url: string; type: "image" | "video" | "link"; small?: boolean }) {
+  const containerClass = `mt-3 ${small ? "max-w-xs" : "max-w-xl"} rounded-xl overflow-hidden glass-strong`;
+  
+  if (type === "image") {
+    return (
+      <div className={containerClass}>
+        <img src={url} alt="Attached media" className="w-full h-auto object-cover" />
+      </div>
+    );
+  }
+  
+  if (type === "video") {
+    // If it's a youtube link, convert to embed. Otherwise render video tag.
+    const ytMatch = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))((\w|-){11})/);
+    if (ytMatch) {
+      return (
+        <div className={`${containerClass} aspect-video`}>
+          <iframe 
+            src={`https://www.youtube.com/embed/${ytMatch[1]}`} 
+            title="Video" 
+            className="w-full h-full border-0" 
+            allowFullScreen 
+          />
+        </div>
+      );
+    }
+    return (
+      <div className={containerClass}>
+        <video src={url} controls className="w-full h-auto" />
+      </div>
+    );
+  }
+  
+  return (
+    <a href={url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 mt-2 px-4 py-2 glass rounded-lg text-sm text-rose-gold hover:underline">
+      <LinkIcon className="w-4 h-4" /> {url.replace(/^https?:\/\//, '').slice(0, 30)}...
+    </a>
   );
 }
 

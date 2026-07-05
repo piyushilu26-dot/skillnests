@@ -19,13 +19,14 @@ function ExtraPage() {
 
   const [isEditingName, setIsEditingName] = useState(false);
   const [draftName, setDraftName] = useState(config.name);
+  const [draftLocation, setDraftLocation] = useState<"toolbar" | "dropdown">(config.location || "dropdown");
 
   function saveName() {
     if (!draftName.trim()) return;
     if (configList.length === 0) {
-      extraConfigStore.update(p => [{ id: "config", name: draftName.trim() }]);
+      extraConfigStore.update(p => [{ id: "config", name: draftName.trim(), location: draftLocation }]);
     } else {
-      extraConfigStore.update(p => p.map(x => x.id === "config" ? { ...x, name: draftName.trim() } : x));
+      extraConfigStore.update(p => p.map(x => x.id === "config" ? { ...x, name: draftName.trim(), location: draftLocation } : x));
     }
     setIsEditingName(false);
   }
@@ -36,7 +37,7 @@ function ExtraPage() {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-28 pb-16">
         <div className="mb-10 flex items-center gap-4">
           {isEditingName ? (
-            <div className="flex items-center gap-2">
+            <div className="flex flex-col gap-4">
               <input 
                 value={draftName}
                 onChange={e => setDraftName(e.target.value)}
@@ -44,7 +45,17 @@ function ExtraPage() {
                 autoFocus
                 onKeyDown={e => e.key === "Enter" && saveName()}
               />
-              <button onClick={saveName} className="btn-phoenix px-4 py-2 rounded-full text-sm">Save</button>
+              <div className="flex items-center gap-4">
+                <select 
+                  value={draftLocation} 
+                  onChange={e => setDraftLocation(e.target.value as any)}
+                  className="glass rounded-xl px-4 py-2 text-sm bg-transparent outline-none"
+                >
+                  <option value="dropdown">Show in Dropdown Menu</option>
+                  <option value="toolbar">Show in Main Toolbar</option>
+                </select>
+                <button onClick={saveName} className="btn-phoenix px-6 py-2 rounded-full text-sm">Save Settings</button>
+              </div>
             </div>
           ) : (
             <div className="flex items-center gap-4 group">
@@ -102,6 +113,20 @@ function ExtraPage() {
                   </div>
                 </a>
               )}
+              
+              {c.type === "video" && (
+                <div className="glass-strong rounded-3xl overflow-hidden p-2 aspect-video">
+                  {c.content.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))((\w|-){11})/) ? (
+                    <iframe 
+                      src={`https://www.youtube.com/embed/${c.content.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))((\w|-){11})/)![1]}`} 
+                      className="w-full h-full rounded-2xl border-0" 
+                      allowFullScreen 
+                    />
+                  ) : (
+                    <video src={c.content} controls className="w-full h-full rounded-2xl bg-black" />
+                  )}
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -111,7 +136,7 @@ function ExtraPage() {
 }
 
 function AdminAdder() {
-  const [type, setType] = useState<"text"|"image"|"pdf">("text");
+  const [type, setType] = useState<"text"|"image"|"pdf"|"video">("text");
   const [content, setContent] = useState("");
 
   function submit(e: React.FormEvent) {
@@ -140,6 +165,9 @@ function AdminAdder() {
         <button type="button" onClick={() => setType("pdf")} className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm transition ${type === "pdf" ? "bg-rose-gold text-white" : "glass"}`}>
           <LinkIcon className="w-4 h-4" /> PDF Link
         </button>
+        <button type="button" onClick={() => setType("video")} className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm transition ${type === "video" ? "bg-rose-gold text-white" : "glass"}`}>
+          <LinkIcon className="w-4 h-4" /> Video Link
+        </button>
       </div>
 
       {type === "text" ? (
@@ -152,7 +180,7 @@ function AdminAdder() {
       ) : (
         <input 
           value={content} onChange={e => setContent(e.target.value)} 
-          placeholder={type === "image" ? "Paste image URL..." : "Paste PDF link..."}
+          placeholder={type === "image" ? "Paste image URL..." : type === "video" ? "Paste YouTube/Video URL..." : "Paste PDF link..."}
           className="w-full glass rounded-xl px-4 py-3 text-sm bg-transparent outline-none mb-4" 
         />
       )}
