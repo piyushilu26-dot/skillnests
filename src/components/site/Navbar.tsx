@@ -7,6 +7,7 @@ import { ThemeToggle } from "./ThemeToggle";
 import { useAuth } from "@/lib/auth";
 
 const links: { label: string; to: string }[] = [
+  { label: "Progress", to: "/progress" },
   { label: "PYQ", to: "/pyq" },
   { label: "Notes", to: "/notes" },
   { label: "Meetings", to: "/meetings" },
@@ -66,7 +67,7 @@ export function Navbar() {
           </Link>
 
           <div className="hidden xl:flex items-center gap-5">
-            {links.slice(0, 8).map((l) => (
+            {links.slice(0, 10).map((l) => (
               <Link
                 key={l.to}
                 to={l.to as any}
