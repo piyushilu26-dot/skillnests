@@ -1,6 +1,6 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { Menu, X, LayoutDashboard, LogOut, User as UserIcon, Shield, MessageSquare, Calendar } from "lucide-react";
+import { Menu, X, LayoutDashboard, LogOut, User as UserIcon, Shield, MessageSquare, Calendar, TrendingUp } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import logoAsset from "@/assets/skillnestslogo.jpeg";
 import { ThemeToggle } from "./ThemeToggle";
@@ -110,6 +110,7 @@ export function Navbar() {
                       <MenuItem to="/chat" icon={<MessageSquare className="w-4 h-4" />} onClick={() => setMenuOpen(false)}>Chat</MenuItem>
                       <MenuItem to="/schedule" icon={<Calendar className="w-4 h-4" />} onClick={() => setMenuOpen(false)}>Schedule</MenuItem>
                       <MenuItem to="/founder" icon={<UserIcon className="w-4 h-4" />} onClick={() => setMenuOpen(false)}>Founder</MenuItem>
+                      <MenuItem to="/progress" icon={<TrendingUp className="w-4 h-4" />} onClick={() => setMenuOpen(false)}>Progress</MenuItem>
                       {isAdmin && (
                         <MenuItem to="/admin" icon={<Shield className="w-4 h-4 text-rose-gold" />} onClick={() => setMenuOpen(false)}>
                           <span className="text-rose-gold">Admin</span>

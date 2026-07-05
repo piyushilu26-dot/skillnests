@@ -17,13 +17,9 @@ function ProgressPage() {
   const goals = userProgressStore.use();
   
   const [draftGoal, setDraftGoal] = useState("");
-  const [todayStr, setTodayStr] = useState("");
-
-  useEffect(() => {
-    // Just a simple YYYY-MM-DD for local timezone
-    const d = new Date();
-    setTodayStr(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`);
-  }, []);
+  // Calculate todayStr synchronously
+  const d = new Date();
+  const todayStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 
   const todayGoals = goals.filter(g => g.date === todayStr);
   const completedToday = todayGoals.filter(g => g.completed).length;

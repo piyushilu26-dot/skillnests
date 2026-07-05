@@ -93,6 +93,13 @@ service cloud.firestore {
         (resource.data.authorEmail == request.auth.token.email || isAdmin());
     }
 
+    match /sn-mun-comments/{id} {
+      allow read: if signedIn();
+      allow create: if signedIn() && request.resource.data.authorEmail == request.auth.token.email && (isAdmin() || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.paid == true);
+      allow update, delete: if signedIn() &&
+        (resource.data.authorEmail == request.auth.token.email || isAdmin());
+    }
+
     match /sn-extra-config/{id} {
       allow read: if signedIn();
       allow write: if isAdmin();

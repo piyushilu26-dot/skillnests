@@ -3,8 +3,8 @@ import { Navbar } from "@/components/site/Navbar";
 import { useAuth } from "@/lib/auth";
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Gavel, Brain, Plus, Trash2, FileText, MessageSquare } from "lucide-react";
-import { munStore, munDebateStore, type MunItem, type MunDebate } from "@/stores";
+import { Gavel, Brain, Plus, Trash2, FileText, MessageSquare, Send } from "lucide-react";
+import { munStore, munDebateStore, munCommentStore, type MunItem, type MunDebate, type MunComment } from "@/stores";
 import { uid } from "@/lib/local-store";
 
 
@@ -15,9 +15,10 @@ export const Route = createFileRoute("/_authenticated/mun")({
 });
 
 function MunPage() {
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, isPaid } = useAuth();
   const items = munStore.use();
   const debates = munDebateStore.use();
+  const comments = munCommentStore.use();
   const [tab, setTab] = useState<"topics" | "debates">("topics");
 
   return (
@@ -56,7 +57,7 @@ function MunPage() {
         {tab === "debates" && (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
             <DebateForm user={user} />
-            <DebateList debates={debates} isAdmin={isAdmin} currentEmail={user?.email} />
+            <DebateList debates={debates} comments={comments} isAdmin={isAdmin} isPaid={isPaid} user={user} />
           </motion.div>
         )}
       </div>
@@ -108,36 +109,105 @@ function DebateForm({ user }: { user: any }) {
   );
 }
 
-function DebateList({ debates, isAdmin, currentEmail }: { debates: MunDebate[]; isAdmin: boolean; currentEmail?: string }) {
+function DebateList({ debates, comments, isAdmin, isPaid, user }: { debates: MunDebate[]; comments: MunComment[]; isAdmin: boolean; isPaid: boolean; user: any }) {
   if (debates.length === 0) return <div className="glass rounded-2xl p-10 text-center text-sm text-muted-foreground">No debates yet. Be the first to start one.</div>;
 
   return (
     <div className="space-y-4">
-      {debates.sort((a,b) => b.createdAt.localeCompare(a.createdAt)).map(d => (
-        <div key={d.id} className="glass rounded-2xl p-6 relative group">
-          {(isAdmin || currentEmail === d.authorEmail) && (
-            <button 
-              onClick={() => { if(confirm("Delete this debate?")) munDebateStore.update(p => p.filter(x => x.id !== d.id)) }} 
-              className="absolute top-4 right-4 p-2 text-muted-foreground hover:text-crimson opacity-0 group-hover:opacity-100 transition"
-              title="Delete debate"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
-          )}
-          <div className="flex items-center gap-2 mb-3">
-            <div className="w-8 h-8 rounded-full bg-rose-gold/20 text-rose-gold grid place-items-center font-serif text-sm">
-              {d.authorName.charAt(0).toUpperCase()}
+      {debates.sort((a,b) => b.createdAt.localeCompare(a.createdAt)).map(d => {
+        const topicComments = comments.filter(c => c.debateId === d.id).sort((a,b) => a.createdAt.localeCompare(b.createdAt));
+        return (
+          <div key={d.id} className="glass rounded-2xl p-6 relative group">
+            {(isAdmin || user?.email === d.authorEmail) && (
+              <button 
+                onClick={() => { if(confirm("Delete this debate?")) munDebateStore.update(p => p.filter(x => x.id !== d.id)) }} 
+                className="absolute top-4 right-4 p-2 text-muted-foreground hover:text-crimson opacity-0 group-hover:opacity-100 transition"
+                title="Delete debate"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            )}
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-8 h-8 rounded-full bg-rose-gold/20 text-rose-gold grid place-items-center font-serif text-sm">
+                {d.authorName.charAt(0).toUpperCase()}
+              </div>
+              <div>
+                <div className="text-sm font-medium">{d.authorName}</div>
+                <div className="text-[10px] font-mono text-muted-foreground">{new Date(d.createdAt).toLocaleString()}</div>
+              </div>
             </div>
-            <div>
-              <div className="text-sm font-medium">{d.authorName}</div>
-              <div className="text-[10px] font-mono text-muted-foreground">{new Date(d.createdAt).toLocaleString()}</div>
+            <div className="font-serif text-2xl mb-3">{d.topic}</div>
+            <div className="text-sm text-foreground/80 leading-relaxed whitespace-pre-wrap">{d.body}</div>
+            
+            {/* Comments Section */}
+            <div className="mt-6 pt-4 border-t border-white/5">
+              <div className="text-xs font-mono uppercase tracking-widest text-muted-foreground mb-4">Discussion ({topicComments.length})</div>
+              
+              <div className="space-y-3 mb-4">
+                {topicComments.map(c => (
+                  <div key={c.id} className="bg-white/5 rounded-xl p-3 relative group/comment text-sm">
+                    {(isAdmin || user?.email === c.authorEmail) && (
+                      <button 
+                        onClick={() => { if(confirm("Delete comment?")) munCommentStore.update(p => p.filter(x => x.id !== c.id)) }} 
+                        className="absolute top-2 right-2 p-1.5 text-muted-foreground hover:text-crimson opacity-0 group-hover/comment:opacity-100 transition rounded-md"
+                        title="Delete comment"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                    <div className="flex items-center gap-2 mb-1">
+                      <div className="font-medium text-rose-gold">{c.authorName}</div>
+                      <div className="text-[10px] font-mono text-muted-foreground">{new Date(c.createdAt).toLocaleString()}</div>
+                    </div>
+                    <div className="text-foreground/90 whitespace-pre-wrap">{c.content}</div>
+                  </div>
+                ))}
+              </div>
+
+              {(isAdmin || isPaid) ? (
+                <CommentForm debateId={d.id} user={user} />
+              ) : (
+                <div className="text-center py-3 bg-white/5 rounded-xl text-xs text-muted-foreground italic">
+                  Upgrade to premium to join the debate.
+                </div>
+              )}
             </div>
           </div>
-          <div className="font-serif text-2xl mb-3">{d.topic}</div>
-          <div className="text-sm text-foreground/80 leading-relaxed whitespace-pre-wrap">{d.body}</div>
-        </div>
-      ))}
+        );
+      })}
     </div>
+  );
+}
+
+function CommentForm({ debateId, user }: { debateId: string; user: any }) {
+  const [content, setContent] = useState("");
+  
+  function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!content.trim()) return;
+    munCommentStore.update(p => [...p, {
+      id: uid(),
+      debateId,
+      authorName: user.name,
+      authorEmail: user.email,
+      content: content.trim(),
+      createdAt: new Date().toISOString()
+    }]);
+    setContent("");
+  }
+  
+  return (
+    <form onSubmit={submit} className="flex gap-2">
+      <input 
+        value={content}
+        onChange={e => setContent(e.target.value)}
+        placeholder="Add to the discussion..."
+        className="flex-1 glass rounded-xl px-4 py-2 text-sm bg-transparent outline-none focus:border-rose-gold/40 transition"
+      />
+      <button type="submit" disabled={!content.trim()} className="btn-phoenix rounded-xl px-4 py-2 flex items-center justify-center disabled:opacity-50 transition">
+        <Send className="w-4 h-4" />
+      </button>
+    </form>
   );
 }
 
