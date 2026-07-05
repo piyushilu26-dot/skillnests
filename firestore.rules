@@ -85,5 +85,27 @@ service cloud.firestore {
       allow update, delete: if signedIn() &&
         (resource.data.authorEmail == request.auth.token.email || isAdmin());
     }
+
+    match /sn-mun-debates/{id} {
+      allow read: if signedIn();
+      allow create: if signedIn() && request.resource.data.authorEmail == request.auth.token.email;
+      allow update, delete: if signedIn() &&
+        (resource.data.authorEmail == request.auth.token.email || isAdmin());
+    }
+
+    match /sn-extra-config/{id} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+
+    match /sn-extra-content/{id} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+
+    match /sn-progress/{id} {
+      allow read, write: if signedIn() && (resource == null || resource.data.userId == request.auth.uid) && request.resource.data.userId == request.auth.uid;
+      allow delete: if signedIn() && resource.data.userId == request.auth.uid;
+    }
   }
 }

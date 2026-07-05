@@ -2,8 +2,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Navbar } from "@/components/site/Navbar";
 import { useAuth } from "@/lib/auth";
 import { useEffect, useState } from "react";
-import { Gavel, Brain, Plus, Trash2, FileText } from "lucide-react";
-import { munStore, type MunItem } from "@/stores";
+import { motion } from "framer-motion";
+import { Gavel, Brain, Plus, Trash2, FileText, MessageSquare } from "lucide-react";
+import { munStore, munDebateStore, type MunItem, type MunDebate } from "@/stores";
 import { uid } from "@/lib/local-store";
 
 
@@ -14,31 +15,129 @@ export const Route = createFileRoute("/_authenticated/mun")({
 });
 
 function MunPage() {
-  const { isAdmin } = useAuth();
+  const { user, isAdmin } = useAuth();
   const items = munStore.use();
-
-  // seed example once
-  useEffect(() => {
-    if (items.length === 0 && isAdmin) {
-      // no auto-seed; admin adds themselves. (Empty state handles UX.)
-    }
-  }, [items.length, isAdmin]);
+  const debates = munDebateStore.use();
+  const [tab, setTab] = useState<"topics" | "debates">("topics");
 
   return (
     <main className="min-h-screen">
       <Navbar />
       <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-28 pb-16">
-        <div className="mb-8">
-          <p className="text-xs font-mono uppercase tracking-widest text-rose-gold">mun & debate</p>
-          <h1 className="font-serif text-4xl mt-1">Voice. Listen. Defend gently.</h1>
+        <div className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
+          <div>
+            <p className="text-xs font-mono uppercase tracking-widest text-rose-gold">mun & debate</p>
+            <h1 className="font-serif text-4xl mt-1">Voice. Listen. Defend gently.</h1>
+          </div>
+          
+          <div className="flex bg-foreground/5 p-1 rounded-full w-fit">
+            <button
+              onClick={() => setTab("topics")}
+              className={`px-6 py-2 rounded-full text-sm font-medium transition ${tab === "topics" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+            >
+              Topics & Blocs
+            </button>
+            <button
+              onClick={() => setTab("debates")}
+              className={`px-6 py-2 rounded-full text-sm font-medium transition ${tab === "debates" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+            >
+              Debate Articles
+            </button>
+          </div>
         </div>
 
-        <>
-          {isAdmin && <AdminForm />}
-          <Grid items={items} isAdmin={isAdmin} />
-        </>
+        {tab === "topics" && (
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
+            {isAdmin && <AdminForm />}
+            <Grid items={items} isAdmin={isAdmin} />
+          </motion.div>
+        )}
+
+        {tab === "debates" && (
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
+            <DebateForm user={user} />
+            <DebateList debates={debates} isAdmin={isAdmin} currentEmail={user?.email} />
+          </motion.div>
+        )}
       </div>
     </main>
+  );
+}
+
+function DebateForm({ user }: { user: any }) {
+  const [draft, setDraft] = useState({ topic: "", body: "" });
+
+  function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!draft.topic.trim() || !draft.body.trim()) return;
+    munDebateStore.update(p => [{
+      id: uid(),
+      topic: draft.topic.trim(),
+      body: draft.body.trim(),
+      authorEmail: user.email,
+      authorName: user.name,
+      createdAt: new Date().toISOString()
+    }, ...p]);
+    setDraft({ topic: "", body: "" });
+  }
+
+  return (
+    <form onSubmit={submit} className="glass-strong rounded-2xl p-5 mb-8">
+      <div className="font-serif text-xl mb-4 text-gradient-gold">Start a debate</div>
+      <div className="space-y-3">
+        <input 
+          value={draft.topic} 
+          onChange={e => setDraft(d => ({ ...d, topic: e.target.value }))} 
+          placeholder="What is your stance or topic?" 
+          className="w-full glass rounded-xl px-4 py-3 text-sm bg-transparent outline-none" 
+        />
+        <textarea 
+          value={draft.body} 
+          onChange={e => setDraft(d => ({ ...d, body: e.target.value }))} 
+          placeholder="Elaborate on your points... be respectful." 
+          rows={4} 
+          className="w-full glass rounded-xl px-4 py-3 text-sm bg-transparent outline-none resize-none" 
+        />
+        <div className="flex justify-end">
+          <button type="submit" className="btn-phoenix rounded-full px-6 py-2.5 text-sm flex items-center gap-2">
+            <MessageSquare className="w-4 h-4" /> Post Article
+          </button>
+        </div>
+      </div>
+    </form>
+  );
+}
+
+function DebateList({ debates, isAdmin, currentEmail }: { debates: MunDebate[]; isAdmin: boolean; currentEmail?: string }) {
+  if (debates.length === 0) return <div className="glass rounded-2xl p-10 text-center text-sm text-muted-foreground">No debates yet. Be the first to start one.</div>;
+
+  return (
+    <div className="space-y-4">
+      {debates.sort((a,b) => b.createdAt.localeCompare(a.createdAt)).map(d => (
+        <div key={d.id} className="glass rounded-2xl p-6 relative group">
+          {(isAdmin || currentEmail === d.authorEmail) && (
+            <button 
+              onClick={() => { if(confirm("Delete this debate?")) munDebateStore.update(p => p.filter(x => x.id !== d.id)) }} 
+              className="absolute top-4 right-4 p-2 text-muted-foreground hover:text-crimson opacity-0 group-hover:opacity-100 transition"
+              title="Delete debate"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          )}
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-8 h-8 rounded-full bg-rose-gold/20 text-rose-gold grid place-items-center font-serif text-sm">
+              {d.authorName.charAt(0).toUpperCase()}
+            </div>
+            <div>
+              <div className="text-sm font-medium">{d.authorName}</div>
+              <div className="text-[10px] font-mono text-muted-foreground">{new Date(d.createdAt).toLocaleString()}</div>
+            </div>
+          </div>
+          <div className="font-serif text-2xl mb-3">{d.topic}</div>
+          <div className="text-sm text-foreground/80 leading-relaxed whitespace-pre-wrap">{d.body}</div>
+        </div>
+      ))}
+    </div>
   );
 }
 

@@ -19,10 +19,11 @@ import {
   Shield,
   ExternalLink,
   Radio,
+  Target,
   type LucideIcon,
 } from "lucide-react";
 import { auth as fbAuth } from "@/lib/firebase";
-import { meetingsStore, noticeStore, type Notice } from "@/stores";
+import { meetingsStore, noticeStore, extraConfigStore, type Notice } from "@/stores";
 import { uid } from "@/lib/local-store";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
@@ -39,9 +40,10 @@ type FeaturePath =
   | "/olympiads"
   | "/mun"
   | "/skill-share"
-  | "/founder";
+  | "/founder"
+  | "/extra";
 
-type PersonalPath = "/chat" | "/schedule" | "/founder" | "/admin";
+type PersonalPath = "/chat" | "/schedule" | "/founder" | "/admin" | "/progress";
 
 const features: Array<{ to: FeaturePath; icon: LucideIcon; title: string; desc: string }> = [
   {
@@ -95,6 +97,8 @@ function Dashboard() {
   const { user, isAdmin, isPaid } = useAuth();
   const meetings = meetingsStore.use();
   const notices = noticeStore.use();
+  const extraConfigList = extraConfigStore.use();
+  const extraConfig = extraConfigList[0] || { name: "Resources" };
 
   // Notification pop-up logic
   useEffect(() => {
@@ -344,6 +348,12 @@ function Dashboard() {
                 accent
               />
             )}
+            <PersonalCard
+              to="/progress"
+              icon={Target}
+              title="Progress"
+              desc="Daily goals & streaks."
+            />
           </div>
         </div>
       </section>
@@ -377,6 +387,16 @@ function Dashboard() {
                 </Link>
               </motion.div>
             ))}
+
+            {/* Dynamic Extra Section */}
+            <motion.div initial={{ opacity: 0, y: 14 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: features.length * 0.04 }}>
+              <Link to="/extra" className="block glass rounded-3xl p-7 hover:border-rose-gold/40 transition group h-full relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-br from-rose-gold/5 to-transparent pointer-events-none" />
+                <BookOpen className="w-7 h-7 text-rose-gold mb-4 group-hover:scale-110 transition relative z-10" strokeWidth={1.2} />
+                <div className="font-serif text-2xl mb-1 relative z-10">{extraConfig.name}</div>
+                <p className="text-sm text-muted-foreground leading-relaxed relative z-10">Free resources and updates.</p>
+              </Link>
+            </motion.div>
           </div>
         </div>
       </section>

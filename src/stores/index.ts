@@ -147,3 +147,40 @@ export type Notice = {
   createdAt: string;
 };
 export const noticeStore = createLocalStore<Notice[]>("sn-notices", [], undefined, "Notice Board");
+
+/* ---------------- MUN Debates ---------------- */
+export type MunDebate = {
+  id: string;
+  topic: string;
+  authorEmail: string;
+  authorName: string;
+  body: string;
+  createdAt: string;
+};
+export const munDebateStore = createLocalStore<MunDebate[]>("sn-mun-debates", [], undefined, "MUN Debates");
+
+/* ---------------- Extra Section (Dynamic) ---------------- */
+export type ExtraConfig = {
+  id: string;
+  name: string;
+};
+export const extraConfigStore = createLocalStore<ExtraConfig[]>("sn-extra-config", []);
+
+export type ExtraContent = {
+  id: string;
+  type: "text" | "image" | "pdf";
+  content: string; // URL for image/pdf, text body for text
+  createdAt: string;
+};
+export const extraContentStore = createLocalStore<ExtraContent[]>("sn-extra-content", [], undefined, "Extra Resources");
+
+/* ---------------- Progress Tracking ---------------- */
+export type DailyGoal = {
+  id: string;
+  userId: string;
+  date: string; // YYYY-MM-DD
+  task: string;
+  completed: boolean;
+  createdAt: string;
+};
+export const userProgressStore = createLocalStore<DailyGoal[]>("sn-progress", [], (col, user) => query(col, where("userId", "==", user.uid)));
