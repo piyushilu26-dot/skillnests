@@ -22,11 +22,13 @@ import { Route as AuthenticatedUpgradeRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedSkillShareRouteImport } from './routes/_authenticated/skill-share'
 import { Route as AuthenticatedScheduleRouteImport } from './routes/_authenticated/schedule'
 import { Route as AuthenticatedPyqRouteImport } from './routes/_authenticated/pyq'
+import { Route as AuthenticatedProgressRouteImport } from './routes/_authenticated/progress'
 import { Route as AuthenticatedOlympiadsRouteImport } from './routes/_authenticated/olympiads'
 import { Route as AuthenticatedNotesRouteImport } from './routes/_authenticated/notes'
 import { Route as AuthenticatedMunRouteImport } from './routes/_authenticated/mun'
 import { Route as AuthenticatedMeetingsRouteImport } from './routes/_authenticated/meetings'
 import { Route as AuthenticatedFounderRouteImport } from './routes/_authenticated/founder'
+import { Route as AuthenticatedExtraRouteImport } from './routes/_authenticated/extra'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedChatRouteImport } from './routes/_authenticated/chat'
 import { Route as AuthenticatedCareerGuidanceRouteImport } from './routes/_authenticated/career-guidance'
@@ -97,6 +99,11 @@ const AuthenticatedPyqRoute = AuthenticatedPyqRouteImport.update({
   path: '/pyq',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedProgressRoute = AuthenticatedProgressRouteImport.update({
+  id: '/progress',
+  path: '/progress',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedOlympiadsRoute = AuthenticatedOlympiadsRouteImport.update({
   id: '/olympiads',
   path: '/olympiads',
@@ -120,6 +127,11 @@ const AuthenticatedMeetingsRoute = AuthenticatedMeetingsRouteImport.update({
 const AuthenticatedFounderRoute = AuthenticatedFounderRouteImport.update({
   id: '/founder',
   path: '/founder',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedExtraRoute = AuthenticatedExtraRouteImport.update({
+  id: '/extra',
+  path: '/extra',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
@@ -162,11 +174,13 @@ export interface FileRoutesByFullPath {
   '/career-guidance': typeof AuthenticatedCareerGuidanceRoute
   '/chat': typeof AuthenticatedChatRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/extra': typeof AuthenticatedExtraRoute
   '/founder': typeof AuthenticatedFounderRoute
   '/meetings': typeof AuthenticatedMeetingsRoute
   '/mun': typeof AuthenticatedMunRoute
   '/notes': typeof AuthenticatedNotesRoute
   '/olympiads': typeof AuthenticatedOlympiadsRoute
+  '/progress': typeof AuthenticatedProgressRoute
   '/pyq': typeof AuthenticatedPyqRoute
   '/schedule': typeof AuthenticatedScheduleRoute
   '/skill-share': typeof AuthenticatedSkillShareRoute
@@ -186,11 +200,13 @@ export interface FileRoutesByTo {
   '/career-guidance': typeof AuthenticatedCareerGuidanceRoute
   '/chat': typeof AuthenticatedChatRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/extra': typeof AuthenticatedExtraRoute
   '/founder': typeof AuthenticatedFounderRoute
   '/meetings': typeof AuthenticatedMeetingsRoute
   '/mun': typeof AuthenticatedMunRoute
   '/notes': typeof AuthenticatedNotesRoute
   '/olympiads': typeof AuthenticatedOlympiadsRoute
+  '/progress': typeof AuthenticatedProgressRoute
   '/pyq': typeof AuthenticatedPyqRoute
   '/schedule': typeof AuthenticatedScheduleRoute
   '/skill-share': typeof AuthenticatedSkillShareRoute
@@ -212,11 +228,13 @@ export interface FileRoutesById {
   '/_authenticated/career-guidance': typeof AuthenticatedCareerGuidanceRoute
   '/_authenticated/chat': typeof AuthenticatedChatRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/extra': typeof AuthenticatedExtraRoute
   '/_authenticated/founder': typeof AuthenticatedFounderRoute
   '/_authenticated/meetings': typeof AuthenticatedMeetingsRoute
   '/_authenticated/mun': typeof AuthenticatedMunRoute
   '/_authenticated/notes': typeof AuthenticatedNotesRoute
   '/_authenticated/olympiads': typeof AuthenticatedOlympiadsRoute
+  '/_authenticated/progress': typeof AuthenticatedProgressRoute
   '/_authenticated/pyq': typeof AuthenticatedPyqRoute
   '/_authenticated/schedule': typeof AuthenticatedScheduleRoute
   '/_authenticated/skill-share': typeof AuthenticatedSkillShareRoute
@@ -238,11 +256,13 @@ export interface FileRouteTypes {
     | '/career-guidance'
     | '/chat'
     | '/dashboard'
+    | '/extra'
     | '/founder'
     | '/meetings'
     | '/mun'
     | '/notes'
     | '/olympiads'
+    | '/progress'
     | '/pyq'
     | '/schedule'
     | '/skill-share'
@@ -262,11 +282,13 @@ export interface FileRouteTypes {
     | '/career-guidance'
     | '/chat'
     | '/dashboard'
+    | '/extra'
     | '/founder'
     | '/meetings'
     | '/mun'
     | '/notes'
     | '/olympiads'
+    | '/progress'
     | '/pyq'
     | '/schedule'
     | '/skill-share'
@@ -287,11 +309,13 @@ export interface FileRouteTypes {
     | '/_authenticated/career-guidance'
     | '/_authenticated/chat'
     | '/_authenticated/dashboard'
+    | '/_authenticated/extra'
     | '/_authenticated/founder'
     | '/_authenticated/meetings'
     | '/_authenticated/mun'
     | '/_authenticated/notes'
     | '/_authenticated/olympiads'
+    | '/_authenticated/progress'
     | '/_authenticated/pyq'
     | '/_authenticated/schedule'
     | '/_authenticated/skill-share'
@@ -405,6 +429,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPyqRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/progress': {
+      id: '/_authenticated/progress'
+      path: '/progress'
+      fullPath: '/progress'
+      preLoaderRoute: typeof AuthenticatedProgressRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/olympiads': {
       id: '/_authenticated/olympiads'
       path: '/olympiads'
@@ -438,6 +469,13 @@ declare module '@tanstack/react-router' {
       path: '/founder'
       fullPath: '/founder'
       preLoaderRoute: typeof AuthenticatedFounderRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/extra': {
+      id: '/_authenticated/extra'
+      path: '/extra'
+      fullPath: '/extra'
+      preLoaderRoute: typeof AuthenticatedExtraRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/dashboard': {
@@ -483,11 +521,13 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedCareerGuidanceRoute: typeof AuthenticatedCareerGuidanceRoute
   AuthenticatedChatRoute: typeof AuthenticatedChatRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedExtraRoute: typeof AuthenticatedExtraRoute
   AuthenticatedFounderRoute: typeof AuthenticatedFounderRoute
   AuthenticatedMeetingsRoute: typeof AuthenticatedMeetingsRoute
   AuthenticatedMunRoute: typeof AuthenticatedMunRoute
   AuthenticatedNotesRoute: typeof AuthenticatedNotesRoute
   AuthenticatedOlympiadsRoute: typeof AuthenticatedOlympiadsRoute
+  AuthenticatedProgressRoute: typeof AuthenticatedProgressRoute
   AuthenticatedPyqRoute: typeof AuthenticatedPyqRoute
   AuthenticatedScheduleRoute: typeof AuthenticatedScheduleRoute
   AuthenticatedSkillShareRoute: typeof AuthenticatedSkillShareRoute
@@ -499,11 +539,13 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedCareerGuidanceRoute: AuthenticatedCareerGuidanceRoute,
   AuthenticatedChatRoute: AuthenticatedChatRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedExtraRoute: AuthenticatedExtraRoute,
   AuthenticatedFounderRoute: AuthenticatedFounderRoute,
   AuthenticatedMeetingsRoute: AuthenticatedMeetingsRoute,
   AuthenticatedMunRoute: AuthenticatedMunRoute,
   AuthenticatedNotesRoute: AuthenticatedNotesRoute,
   AuthenticatedOlympiadsRoute: AuthenticatedOlympiadsRoute,
+  AuthenticatedProgressRoute: AuthenticatedProgressRoute,
   AuthenticatedPyqRoute: AuthenticatedPyqRoute,
   AuthenticatedScheduleRoute: AuthenticatedScheduleRoute,
   AuthenticatedSkillShareRoute: AuthenticatedSkillShareRoute,
