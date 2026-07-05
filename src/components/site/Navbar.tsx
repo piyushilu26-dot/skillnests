@@ -72,7 +72,7 @@ export function Navbar() {
           </Link>
 
           <div className="hidden xl:flex items-center gap-5">
-            {links.slice(0, 11).map((l) => (
+            {links.slice(0, 10).map((l) => (
               <Link
                 key={l.to}
                 to={l.to as any}
