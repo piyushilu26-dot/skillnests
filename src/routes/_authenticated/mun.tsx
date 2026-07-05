@@ -28,7 +28,7 @@ function MunPage() {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-28 pb-16">
         <div className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div>
-            <p className="text-xs font-mono uppercase tracking-widest text-rose-gold">mun & debate</p>
+            <p className="text-xs font-mono uppercase tracking-widest text-rose-gold">mun & debate section</p>
             <h1 className="font-serif text-4xl mt-1">Voice. Listen. Defend gently.</h1>
           </div>
           

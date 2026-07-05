@@ -16,7 +16,7 @@ const links: { label: string; to: string }[] = [
   { label: "Schedule", to: "/schedule" },
   { label: "Career", to: "/career-guidance" },
   { label: "Olympiads", to: "/olympiads" },
-  { label: "MUN", to: "/mun" },
+  { label: "MUN & Debate Section", to: "/mun" },
   { label: "Skill Share", to: "/skill-share" },
   { label: "The Team", to: "/founder" },
 ];

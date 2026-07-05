@@ -41,7 +41,7 @@ function AdminPage() {
     { to: "/career-guidance", icon: Compass, title: "Career", count: careerVidCount + careerLiveCount, desc: `${careerLiveCount} live · ${careerVidCount} videos` },
     { to: "/skill-share", icon: Users, title: "Skill Share", count: skillCount, desc: "User submissions." },
     { to: "/coding-campus", icon: Code2, title: "Coding", count: codingCount, desc: "Workshops." },
-    { to: "/mun", icon: BarChart3, title: "MUN", count: munCount, desc: "Topics & blocs." },
+    { to: "/mun", icon: BarChart3, title: "MUN & Debate Section", count: munCount, desc: "Topics & blocs." },
     { to: "/olympiads", icon: Trophy, title: "Olympiads", count: olympiadCount, desc: "Subjects & resources." },
     { to: "#notices", icon: FileText, title: "Notices", count: noticeCount, desc: "Dashboard announcements." },
   ];
