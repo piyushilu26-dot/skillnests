@@ -1,66 +1,292 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Navbar } from "@/components/site/Navbar";
 import { useAuth } from "@/lib/auth";
-import { useState } from "react";
-import { Compass, ExternalLink, Plus, Trash2, Edit3, Video, FileText, Eye, GraduationCap, BriefcaseBusiness, ChevronDown, X } from "lucide-react";
+import React, { useState } from "react";
+import { Compass, ExternalLink, Plus, Trash2, Edit3, Video, FileText, Eye, X, LockKeyhole } from "lucide-react";
+import { careerGuideStore } from "@/stores/career-guides";
 import { careerLiveStore, careerVideoStore } from "@/stores";
 import { uid } from "@/lib/local-store";
 import { PaidGate } from "@/components/PaidGate";
 import { DrivePdfViewer } from "@/components/DrivePdfViewer";
 import { isDriveUrl } from "@/lib/drive";
 
-function normalizeUrl(url: string): string { const trimmed = url.trim(); if (/^https?:\/\//i.test(trimmed)) return trimmed; return `https://${trimmed}`; }
+function normalizeUrl(url: string): string {
+  const trimmed = url.trim();
+  if (/^(https?:\/\/|\/)/i.test(trimmed)) return trimmed;
+  return `https://${trimmed}`;
+}
 
-type Career = { id: string; interest: string; topic: string; title: string; description: string; course: string; skills: string[]; universities: string[]; note: string };
-
-const CAREERS: Career[] = [
-  { id: "data-scientist", interest: "Tech & Computing", topic: "Career in Tech", title: "Data Scientist", description: "Data scientists use statistics, programming and machine learning to turn large datasets into useful predictions, insights and decisions for businesses, researchers and public institutions.", course: "Typical route: B.Tech/B.E. in Computer Science, AI, Data Science or a related engineering field; alternatively a B.Sc. in Statistics, Mathematics, Computer Science or Data Science followed by an M.Sc./M.Tech.", skills: ["Python", "Statistics", "SQL", "Machine learning", "Data visualization"], universities: ["Carnegie Mellon University", "Stanford University", "Massachusetts Institute of Technology (MIT)"], note: "Best suited to students who enjoy mathematics, coding, problem-solving and finding patterns in data." },
-  { id: "software-engineer", interest: "Tech & Computing", topic: "Career in Tech", title: "Software Engineer", description: "Software engineers design, build, test and maintain applications, platforms and systems across web, mobile, cloud, cybersecurity and AI infrastructure.", course: "Typical route: B.Tech/B.E. or B.Sc. in Computer Science, Software Engineering or a related field. Strong programming projects and internships are highly valuable.", skills: ["Programming", "Algorithms", "System design", "Git", "Problem-solving"], universities: ["Massachusetts Institute of Technology (MIT)", "Stanford University", "Carnegie Mellon University"], note: "A strong option if you like building things, coding and understanding how technology works." },
-  { id: "ai-researcher", interest: "Tech & Computing", topic: "Career in AI & Research", title: "AI / Machine Learning Researcher", description: "AI researchers develop and evaluate new methods for machine learning and artificial intelligence, often working on algorithms, models, experiments and scientific publications.", course: "Typical route: Bachelor's in Computer Science, Mathematics, Statistics, Physics or a related field, followed by an M.S./M.Tech. and often a Ph.D. for research scientist roles.", skills: ["Linear algebra", "Probability", "Python", "Optimization", "Research"], universities: ["Stanford University", "MIT", "Carnegie Mellon University"], note: "Especially suitable if you enjoy advanced mathematics, experimentation and difficult technical questions." },
-  { id: "doctor", interest: "Biology & Healthcare", topic: "Career in Medicine", title: "Doctor / Physician", description: "Physicians diagnose illness, treat patients and work with healthcare teams to improve health. Specializations include cardiology, surgery, pediatrics and neurology.", course: "India: MBBS followed by postgraduate specialization such as MD/MS. Admission is generally through NEET-UG for Indian medical colleges.", skills: ["Biology", "Clinical reasoning", "Communication", "Discipline", "Empathy"], universities: ["AIIMS New Delhi", "Christian Medical College, Vellore", "Johns Hopkins University"], note: "Requires a long training pathway and sustained interest in biology, healthcare and working with people." },
-  { id: "biotech-researcher", interest: "Biology & Healthcare", topic: "Career in Biotechnology", title: "Biotechnology Researcher", description: "Biotechnology researchers apply biology, chemistry and technology to medicine, agriculture, diagnostics and industrial biotechnology.", course: "Typical route: B.Sc./B.Tech. in Biotechnology, Biochemistry, Biology or a related discipline, followed by an M.Sc./M.Tech. A Ph.D. is common for independent research careers.", skills: ["Biology", "Chemistry", "Lab work", "Data analysis", "Scientific writing"], universities: ["University of Cambridge", "ETH Zurich", "MIT"], note: "Good for students who enjoy biology and laboratory research more than clinical patient care." },
-  { id: "investment-banker", interest: "Business & Finance", topic: "Career in Finance", title: "Investment Banker", description: "Investment bankers advise companies and institutions on fundraising, mergers, acquisitions and other major financial transactions.", course: "Typical route: Bachelor's degree in Economics, Finance, Mathematics, Business or a related subject. An MBA or master's can help for some career paths.", skills: ["Finance", "Economics", "Excel", "Valuation", "Communication"], universities: ["University of Pennsylvania (Wharton)", "Harvard University", "New York University (Stern)"], note: "Fits students interested in markets, business strategy, numbers and corporate decisions." },
-  { id: "economist", interest: "Business & Finance", topic: "Career in Economics", title: "Economist", description: "Economists study how people, firms and governments make choices and use data and economic models to understand markets, policy and resource allocation.", course: "Typical route: Bachelor's in Economics, Mathematics, Statistics or a related subject. Many research and economist roles prefer a master's or Ph.D.", skills: ["Microeconomics", "Macroeconomics", "Statistics", "Econometrics", "Research"], universities: ["MIT", "Harvard University", "London School of Economics and Political Science (LSE)"], note: "Strong fit if you enjoy economics, mathematics, research and understanding policy effects." },
-  { id: "entrepreneur", interest: "Entrepreneurship", topic: "Career in Entrepreneurship", title: "Entrepreneur / Startup Founder", description: "Entrepreneurs identify problems, develop products or services, build teams and create organizations. The path is less credential-driven than many traditional professions.", course: "There is no single required degree. Useful options include BBA, Economics, Computer Science, Engineering or Design, alongside entrepreneurship, accounting and marketing.", skills: ["Problem discovery", "Product thinking", "Leadership", "Sales", "Financial literacy"], universities: ["Stanford University", "University of Pennsylvania (Wharton)", "MIT"], note: "Best approached by combining a strong domain skill with real projects, customer research and experimentation." },
-  { id: "lawyer", interest: "Law & Policy", topic: "Career in Law", title: "Lawyer / Advocate", description: "Lawyers interpret legal rules, advise clients, prepare arguments and represent people or organizations in legal matters.", course: "India: a common route after Class 12 is a 5-year integrated BA LLB, BBA LLB or BCom LLB. Graduates can also pursue a 3-year LLB after a bachelor's degree.", skills: ["Reading", "Argumentation", "Writing", "Research", "Public speaking"], universities: ["National Law School of India University (NLSIU)", "University of Oxford", "Harvard University"], note: "A good fit for students who enjoy debate, reading, writing, public speaking and analysing rules." },
-  { id: "policy-analyst", interest: "Law & Policy", topic: "Career in Public Policy", title: "Public Policy Analyst", description: "Policy analysts research public problems, evaluate evidence and help governments, think tanks or organizations design and assess policies.", course: "Typical route: Bachelor's in Economics, Political Science, Public Policy, Statistics, Law or a related subject, followed by an MPP/MPA or relevant master's for many specialist roles.", skills: ["Research", "Economics", "Statistics", "Writing", "Critical thinking"], universities: ["Harvard Kennedy School", "University of Chicago", "University of Oxford"], note: "Useful for students interested in current affairs, economics, governance and large-scale social problems." },
-  { id: "ux-designer", interest: "Design & Media", topic: "Career in Design", title: "UX / Product Designer", description: "UX and product designers research user needs and design digital experiences that are useful, accessible and intuitive.", course: "Typical route: Bachelor's in Design, Interaction Design, Human-Computer Interaction, Visual Communication or a related field. A strong portfolio is essential.", skills: ["Visual design", "User research", "Prototyping", "Figma", "Communication"], universities: ["Rhode Island School of Design (RISD)", "Parsons School of Design", "Stanford University"], note: "Good for students who combine creativity with empathy, technology and structured problem-solving." },
-  { id: "scientist", interest: "Science & Research", topic: "Career in Scientific Research", title: "Research Scientist", description: "Research scientists investigate questions, design experiments, analyse evidence and communicate findings across physics, chemistry, biology, materials science and other fields.", course: "Typical route: Bachelor's in the chosen science, followed by a master's and often a Ph.D. for independent research positions.", skills: ["Mathematics", "Experimentation", "Data analysis", "Scientific writing", "Curiosity"], universities: ["California Institute of Technology (Caltech)", "University of Cambridge", "ETH Zurich"], note: "Best suited to students who enjoy asking why things happen and are comfortable with long-term investigation." }
-];
-
-export const Route = createFileRoute("/_authenticated/career-guidance")({ ssr: false, head: () => ({ meta: [{ title: "SkillNests" }] }), component: CareerPage });
+export const Route = createFileRoute("/_authenticated/career-guidance")({
+  ssr: false,
+  head: () => ({ meta: [{ title: "SkillNests" }] }),
+  component: CareerPage,
+});
 
 function CareerPage() {
   const { isAdmin } = useAuth();
-  const [tab, setTab] = useState<"live" | "videos">("live");
-  return <main className="min-h-screen"><Navbar /><div className="max-w-6xl mx-auto px-4 sm:px-6 pt-28 pb-16"><div className="mb-8"><p className="text-xs font-mono uppercase tracking-widest text-rose-gold">career & motivation</p><h1 className="font-serif text-4xl mt-1">Pick a direction. Without panic.</h1><p className="text-sm text-muted-foreground mt-2 max-w-2xl">Explore careers by interest, understand the usual education route, and see universities that are well known for each field. These are starting points, not one-size-fits-all prescriptions.</p></div><div className="flex gap-2 mb-6 flex-wrap"><Tab active={tab === "live"} onClick={() => setTab("live")}>Live class & links</Tab><Tab active={tab === "videos"} onClick={() => setTab("videos")}>Explore careers</Tab></div>{tab === "live" && <LiveSection isAdmin={isAdmin} />}{tab === "videos" && <CareerExplorer isAdmin={isAdmin} />}</div></main>;
+  const [tab, setTab] = useState<"live" | "careers">("careers");
+
+  return (
+    <main className="min-h-screen">
+      <Navbar />
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-28 pb-16">
+        <div className="mb-8">
+          <p className="text-xs font-mono uppercase tracking-widest text-rose-gold">career & motivation</p>
+          <h1 className="font-serif text-4xl mt-1">Pick a direction. Without panic.</h1>
+          <p className="text-sm text-muted-foreground mt-2 max-w-2xl">
+            Explore career options by interest. Each option has a dedicated document with the profession,
+            course pathway, skills and three universities well known for the field.
+          </p>
+        </div>
+
+        <div className="flex gap-2 mb-6 flex-wrap">
+          <Tab active={tab === "careers"} onClick={() => setTab("careers")}>Explore careers</Tab>
+          <Tab active={tab === "live"} onClick={() => setTab("live")}>Live class & links</Tab>
+        </div>
+
+        {tab === "careers" ? <CareerExplorer isAdmin={isAdmin} /> : <LiveSection isAdmin={isAdmin} />}
+      </div>
+    </main>
+  );
 }
 
-function Tab({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) { return <button onClick={onClick} className={`px-4 py-2 rounded-full text-sm transition ${active ? "glass-strong border-rose-gold/40 text-rose-gold" : "glass text-muted-foreground hover:text-foreground"}`}>{children}</button>; }
+function Tab({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button onClick={onClick}
+      className={`px-4 py-2 rounded-full text-sm transition ${active ? "glass-strong border-rose-gold/40 text-rose-gold" : "glass text-muted-foreground hover:text-foreground"}`}>
+      {children}
+    </button>
+  );
+}
 
 function LiveSection({ isAdmin }: { isAdmin: boolean }) {
-  const live = careerLiveStore.use(); const [draft, setDraft] = useState({ title: "", mentor: "", startsAt: "", meetUrl: "" });
-  function add(e: React.FormEvent) { e.preventDefault(); if (!draft.title || !draft.mentor || !draft.startsAt || !draft.meetUrl) return; careerLiveStore.update(prev => [...prev, { id: uid(), title: draft.title, mentor: draft.mentor, startsAt: new Date(draft.startsAt).toISOString(), meetUrl: draft.meetUrl }]); setDraft({ title: "", mentor: "", startsAt: "", meetUrl: "" }); }
-  return <div>{isAdmin && <form onSubmit={add} className="glass-strong rounded-2xl p-4 mb-5 grid sm:grid-cols-2 gap-3"><input value={draft.title} onChange={e => setDraft({ ...draft, title: e.target.value })} placeholder="Session title" className="glass rounded-xl px-4 py-2.5 text-sm bg-transparent outline-none" /><input value={draft.mentor} onChange={e => setDraft({ ...draft, mentor: e.target.value })} placeholder="Mentor name" className="glass rounded-xl px-4 py-2.5 text-sm bg-transparent outline-none" /><input type="datetime-local" value={draft.startsAt} onChange={e => setDraft({ ...draft, startsAt: e.target.value })} className="glass rounded-xl px-4 py-2.5 text-sm bg-transparent outline-none" /><input value={draft.meetUrl} onChange={e => setDraft({ ...draft, meetUrl: e.target.value })} placeholder="Live link" className="glass rounded-xl px-4 py-2.5 text-sm bg-transparent outline-none" /><button className="btn-phoenix rounded-full px-5 py-2.5 text-sm sm:col-span-2 flex items-center justify-center gap-2"><Plus className="w-4 h-4" /> Add live class</button></form>}<div className="space-y-3">{live.length === 0 && <div className="glass rounded-2xl p-10 text-center text-sm text-muted-foreground">No live classes scheduled.</div>}{live.map((s, i) => <div key={s.id} className="glass rounded-2xl p-4 flex items-center gap-4"><Compass className="w-5 h-5 text-rose-gold shrink-0" strokeWidth={1.2} /><div className="flex-1 min-w-0"><div className="font-serif text-lg truncate">{s.title}</div><div className="text-xs text-muted-foreground">{s.mentor} · {new Date(s.startsAt).toLocaleString()}</div></div>{i === 0 ? <a href={normalizeUrl(s.meetUrl)} target="_blank" rel="noreferrer" className="btn-phoenix rounded-full px-4 py-2 text-xs flex items-center gap-1.5"><ExternalLink className="w-3 h-3" /> Join</a> : <PaidGate label="Locked"><a href={normalizeUrl(s.meetUrl)} target="_blank" rel="noreferrer" className="btn-phoenix rounded-full px-4 py-2 text-xs flex items-center gap-1.5"><ExternalLink className="w-3 h-3" /> Join</a></PaidGate>}{isAdmin && <button onClick={() => careerLiveStore.update(p => p.filter(x => x.id !== s.id))} className="text-muted-foreground hover:text-crimson p-2"><Trash2 className="w-4 h-4" /></button>}</div>)}</div></div>;
+  const live = careerLiveStore.use();
+  const [draft, setDraft] = useState({ title: "", mentor: "", startsAt: "", meetUrl: "" });
+
+  function add(e: React.FormEvent) {
+    e.preventDefault();
+    if (!draft.title || !draft.mentor || !draft.startsAt || !draft.meetUrl) return;
+    careerLiveStore.update(prev => [...prev, {
+      id: uid(), title: draft.title, mentor: draft.mentor,
+      startsAt: new Date(draft.startsAt).toISOString(), meetUrl: draft.meetUrl
+    }]);
+    setDraft({ title: "", mentor: "", startsAt: "", meetUrl: "" });
+  }
+
+  return (
+    <div>
+      {isAdmin && (
+        <form onSubmit={add} className="glass-strong rounded-2xl p-4 mb-5 grid sm:grid-cols-2 gap-3">
+          <input value={draft.title} onChange={e => setDraft({ ...draft, title: e.target.value })} placeholder="Session title" className="glass rounded-xl px-4 py-2.5 text-sm bg-transparent outline-none" />
+          <input value={draft.mentor} onChange={e => setDraft({ ...draft, mentor: e.target.value })} placeholder="Mentor name" className="glass rounded-xl px-4 py-2.5 text-sm bg-transparent outline-none" />
+          <input type="datetime-local" value={draft.startsAt} onChange={e => setDraft({ ...draft, startsAt: e.target.value })} className="glass rounded-xl px-4 py-2.5 text-sm bg-transparent outline-none" />
+          <input value={draft.meetUrl} onChange={e => setDraft({ ...draft, meetUrl: e.target.value })} placeholder="Live link" className="glass rounded-xl px-4 py-2.5 text-sm bg-transparent outline-none" />
+          <button className="btn-phoenix rounded-full px-5 py-2.5 text-sm sm:col-span-2 flex items-center justify-center gap-2"><Plus className="w-4 h-4" /> Add live class</button>
+        </form>
+      )}
+      <div className="space-y-3">
+        {live.length === 0 && <div className="glass rounded-2xl p-10 text-center text-sm text-muted-foreground">No live classes scheduled.</div>}
+        {live.map((s, i) => (
+          <div key={s.id} className="glass rounded-2xl p-4 flex items-center gap-4">
+            <Compass className="w-5 h-5 text-rose-gold shrink-0" strokeWidth={1.2} />
+            <div className="flex-1 min-w-0">
+              <div className="font-serif text-lg truncate">{s.title}</div>
+              <div className="text-xs text-muted-foreground">{s.mentor} · {new Date(s.startsAt).toLocaleString()}</div>
+            </div>
+            {i === 0
+              ? <a href={normalizeUrl(s.meetUrl)} target="_blank" rel="noreferrer" className="btn-phoenix rounded-full px-4 py-2 text-xs flex items-center gap-1.5"><ExternalLink className="w-3 h-3" /> Join</a>
+              : <PaidGate label="Locked"><a href={normalizeUrl(s.meetUrl)} target="_blank" rel="noreferrer" className="btn-phoenix rounded-full px-4 py-2 text-xs flex items-center gap-1.5"><ExternalLink className="w-3 h-3" /> Join</a></PaidGate>}
+            {isAdmin && <button onClick={() => careerLiveStore.update(p => p.filter(x => x.id !== s.id))} className="text-muted-foreground hover:text-crimson p-2"><Trash2 className="w-4 h-4" /></button>}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 function CareerExplorer({ isAdmin }: { isAdmin: boolean }) {
-  const interests = ["All", ...Array.from(new Set(CAREERS.map(c => c.interest)))]; const [interest, setInterest] = useState("All"); const [openId, setOpenId] = useState<string | null>("data-scientist"); const filtered = interest === "All" ? CAREERS : CAREERS.filter(c => c.interest === interest);
-  return <div><div className="glass-strong rounded-2xl p-5 mb-6"><div className="flex items-center gap-2 mb-1"><Compass className="w-5 h-5 text-rose-gold" /><h2 className="font-serif text-2xl">Find careers by interest</h2></div><p className="text-sm text-muted-foreground mb-4">Start with the subjects and activities you naturally enjoy. Then compare the actual work, education pathway and university options.</p><div className="flex gap-2 flex-wrap">{interests.map(i => <button key={i} onClick={() => { setInterest(i); setOpenId(null); }} className={`px-3 py-1.5 rounded-full text-xs transition ${interest === i ? "btn-phoenix" : "glass text-muted-foreground hover:text-foreground"}`}>{i}</button>)}</div></div><div className="space-y-4">{filtered.map(c => <CareerCard key={c.id} career={c} open={openId === c.id} onToggle={() => setOpenId(openId === c.id ? null : c.id)} />)}</div><CareerResources isAdmin={isAdmin} /></div>;
+  const guides = careerGuideStore.use().filter(g => !g.removed);
+  const interests = ["All", ...Array.from(new Set(guides.map(g => g.interest).filter(Boolean)))];
+  const [interest, setInterest] = useState("All");
+  const filtered = interest === "All" ? guides : guides.filter(g => g.interest === interest);
+
+  return (
+    <div>
+      <div className="glass-strong rounded-2xl p-5 mb-6">
+        <div className="flex items-center gap-2 mb-1">
+          <Compass className="w-5 h-5 text-rose-gold" />
+          <h2 className="font-serif text-2xl">Explore career options</h2>
+        </div>
+        <p className="text-sm text-muted-foreground mb-4">
+          Two career documents are free. From the third career document onward, access requires the ₹49 paid membership.
+        </p>
+        <div className="flex gap-2 flex-wrap">
+          {interests.map(i => (
+            <button key={i} onClick={() => setInterest(i)}
+              className={`px-3 py-1.5 rounded-full text-xs transition ${interest === i ? "btn-phoenix" : "glass text-muted-foreground hover:text-foreground"}`}>
+              {i}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {isAdmin && <CareerGuideAdmin />}
+      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {filtered.map((guide, index) => (
+          <CareerGuideCard key={guide.id} guide={guide} index={index} isAdmin={isAdmin} />
+        ))}
+      </div>
+
+      <CareerResources isAdmin={isAdmin} />
+    </div>
+  );
 }
 
-function CareerCard({ career, open, onToggle }: { career: Career; open: boolean; onToggle: () => void }) { return <div className="glass rounded-2xl overflow-hidden"><button onClick={onToggle} className="w-full text-left p-5 flex items-center gap-4 hover:bg-white/5 transition"><div className="w-11 h-11 rounded-xl bg-rose-gold/10 grid place-items-center shrink-0"><BriefcaseBusiness className="w-5 h-5 text-rose-gold" /></div><div className="flex-1 min-w-0"><div className="text-[10px] uppercase tracking-[0.25em] font-mono text-rose-gold">{career.topic}</div><div className="font-serif text-xl">{career.title}</div><div className="text-xs text-muted-foreground">Interest: {career.interest}</div></div><ChevronDown className={`w-5 h-5 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`} /></button>{open && <div className="px-5 pb-6 border-t border-white/5 pt-5 space-y-5"><p className="text-sm leading-relaxed text-foreground/85">{career.description}</p><div className="grid md:grid-cols-2 gap-4"><InfoBlock icon={<GraduationCap className="w-4 h-4" />} title="Course / education pathway" text={career.course} /><div className="glass rounded-xl p-4"><div className="text-xs uppercase tracking-widest font-mono text-rose-gold mb-2">Useful skills</div><div className="flex flex-wrap gap-2">{career.skills.map(s => <span key={s} className="px-2.5 py-1 rounded-full bg-white/5 text-xs">{s}</span>)}</div></div></div><div className="glass rounded-xl p-4"><div className="text-xs uppercase tracking-widest font-mono text-rose-gold mb-3">3 universities well known for this field</div><ol className="space-y-2 text-sm">{career.universities.map((u, i) => <li key={u} className="flex gap-3"><span className="text-rose-gold font-mono">0{i + 1}</span><span>{u}</span></li>)}</ol></div><div className="text-xs text-muted-foreground border-l-2 border-rose-gold/40 pl-3">{career.note}</div></div>}</div>; }
-function InfoBlock({ icon, title, text }: { icon: React.ReactNode; title: string; text: string }) { return <div className="glass rounded-xl p-4"><div className="flex items-center gap-2 text-xs uppercase tracking-widest font-mono text-rose-gold mb-2">{icon}{title}</div><p className="text-xs leading-relaxed text-muted-foreground">{text}</p></div>; }
+function CareerGuideAdmin() {
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [draft, setDraft] = useState({ title: "", interest: "", documentUrl: "", isPaid: true });
+
+  React.useEffect(() => {
+    const handler = (event: Event) => {
+      const guide = (event as CustomEvent).detail;
+      if (!guide) return;
+      setEditingId(guide.id);
+      setDraft({ title: guide.title || "", interest: guide.interest || "", documentUrl: guide.documentUrl || "", isPaid: !!guide.isPaid });
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    };
+    window.addEventListener("skillnests:edit-career-guide", handler);
+    return () => window.removeEventListener("skillnests:edit-career-guide", handler);
+  }, []);
+
+  const reset = () => {
+    setEditingId(null);
+    setDraft({ title: "", interest: "", documentUrl: "", isPaid: true });
+  };
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!draft.title || !draft.documentUrl) return;
+    careerGuideStore.update(prev => {
+      if (editingId) return prev.map(g => g.id === editingId ? { ...g, ...draft, kind: "career-guide" as const, removed: false } : g);
+      return [...prev, { id: uid(), kind: "career-guide" as const, speaker: "SkillNests Career Guide", ...draft }];
+    });
+    reset();
+  };
+
+  return (
+    <form onSubmit={submit} className="glass-strong rounded-2xl p-4 mb-5 grid sm:grid-cols-2 gap-3">
+      <div className="sm:col-span-2 flex items-center justify-between">
+        <span className="text-xs uppercase tracking-widest font-mono text-rose-gold">{editingId ? "Edit career document" : "Add career document"}</span>
+        {editingId && <button type="button" onClick={reset} className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"><X className="w-3 h-3" /> Cancel</button>}
+      </div>
+      <input value={draft.title} onChange={e => setDraft({ ...draft, title: e.target.value })} placeholder="Career title" className="glass rounded-xl px-4 py-2.5 text-sm bg-transparent outline-none" />
+      <input value={draft.interest} onChange={e => setDraft({ ...draft, interest: e.target.value })} placeholder="Interest area" className="glass rounded-xl px-4 py-2.5 text-sm bg-transparent outline-none" />
+      <input value={draft.documentUrl} onChange={e => setDraft({ ...draft, documentUrl: e.target.value })} placeholder="Document file URL / path" className="glass rounded-xl px-4 py-2.5 text-sm bg-transparent outline-none sm:col-span-2" />
+      <label className="glass rounded-xl px-4 py-2.5 text-sm flex items-center gap-2">
+        <input type="checkbox" checked={draft.isPaid} onChange={e => setDraft({ ...draft, isPaid: e.target.checked })} />
+        Paid document
+      </label>
+      <button className="btn-phoenix rounded-full px-5 py-2.5 text-sm sm:col-span-2 flex items-center justify-center gap-2">
+        {editingId ? <><Edit3 className="w-4 h-4" /> Save changes</> : <><Plus className="w-4 h-4" /> Add career document</>}
+      </button>
+    </form>
+  );
+}
+
+function CareerGuideCard({ guide, index, isAdmin }: { guide: any; index: number; isAdmin: boolean }) {
+  const [viewing, setViewing] = useState<{ url: string; title: string } | null>(null);
+  const open = () => {
+    if (!guide.documentUrl) return;
+    if (isDriveUrl(guide.documentUrl)) setViewing({ url: guide.documentUrl, title: guide.title });
+    else window.open(normalizeUrl(guide.documentUrl), "_blank", "noopener,noreferrer");
+  };
+
+  return (
+    <>
+      <div className="glass rounded-2xl overflow-hidden group relative">
+        <div className="p-5">
+          <div className="text-xs font-mono uppercase tracking-widest text-rose-gold">{guide.interest}</div>
+          <div className="font-serif text-xl mt-1">{guide.title}</div>
+          {guide.speaker && <div className="text-xs text-muted-foreground mt-1">{guide.speaker}</div>}
+          <div className="mt-4">
+            {guide.isPaid
+              ? <PaidGate label="₹49/month required"><button onClick={open} className="btn-ghost-gold rounded-full px-4 py-2 text-xs inline-flex items-center gap-1.5"><LockKeyhole className="w-3 h-3" /> Unlock document</button></PaidGate>
+              : <button onClick={open} className="btn-phoenix rounded-full px-4 py-2 text-xs inline-flex items-center gap-1.5"><Eye className="w-3 h-3" /> View free document</button>}
+          </div>
+        </div>
+        {isAdmin && (
+          <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition">
+            <button onClick={() => window.dispatchEvent(new CustomEvent("skillnests:edit-career-guide", { detail: guide }))} title="Edit career document" className="glass-strong rounded-full p-1.5 text-muted-foreground hover:text-rose-gold"><Edit3 className="w-3.5 h-3.5" /></button>
+            <button onClick={() => careerGuideStore.update(p => p.map(x => x.id === guide.id ? { ...x, removed: true } : x))} title="Remove career document" className="glass-strong rounded-full p-1.5 text-muted-foreground hover:text-crimson"><Trash2 className="w-3.5 h-3.5" /></button>
+          </div>
+        )}
+      </div>
+      {viewing && <DrivePdfViewer url={viewing.url} title={viewing.title} onClose={() => setViewing(null)} />}
+    </>
+  );
+}
 
 function CareerResources({ isAdmin }: { isAdmin: boolean }) {
-  const items = careerVideoStore.use(); const [draft, setDraft] = useState({ title: "", speaker: "", thumb: "", videoUrl: "", documentUrl: "" }); const [editingId, setEditingId] = useState<string | null>(null); const [viewing, setViewing] = useState<{ url: string; title: string } | null>(null);
-  function reset() { setDraft({ title: "", speaker: "", thumb: "", videoUrl: "", documentUrl: "" }); setEditingId(null); }
-  function submit(e: React.FormEvent) { e.preventDefault(); if (!draft.title.trim() || (!draft.videoUrl.trim() && !draft.documentUrl.trim())) return; const value = { title: draft.title.trim(), speaker: draft.speaker.trim() || undefined, thumb: draft.thumb.trim() || undefined, videoUrl: draft.videoUrl.trim() || undefined, documentUrl: draft.documentUrl.trim() || undefined }; if (editingId) careerVideoStore.update(prev => prev.map(item => item.id === editingId ? { ...item, ...value } : item)); else careerVideoStore.update(prev => [...prev, { id: uid(), ...value }]); reset(); }
-  function edit(item: any) { setEditingId(item.id); setDraft({ title: item.title || "", speaker: item.speaker || "", thumb: item.thumb || "", videoUrl: item.videoUrl || "", documentUrl: item.documentUrl || "" }); window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" }); }
-  return <div className="mt-10 pt-8 border-t border-white/5"><div className="flex items-end justify-between mb-4"><div><div className="text-xs font-mono uppercase tracking-widest text-rose-gold">Career resources</div><h3 className="font-serif text-2xl">Guides, talks & documents</h3><p className="text-xs text-muted-foreground mt-1">Admins can add, edit or remove resources without changing the career cards.</p></div></div>{isAdmin && <form onSubmit={submit} className="glass-strong rounded-2xl p-4 mb-5 grid sm:grid-cols-2 gap-3"><div className="sm:col-span-2 flex items-center justify-between"><span className="text-xs uppercase tracking-widest font-mono text-rose-gold">{editingId ? "Edit career resource" : "Add career resource"}</span>{editingId && <button type="button" onClick={reset} className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"><X className="w-3 h-3" /> Cancel</button>}</div><input value={draft.title} onChange={e => setDraft({ ...draft, title: e.target.value })} placeholder="Title" className="glass rounded-xl px-4 py-2.5 text-sm bg-transparent outline-none" /><input value={draft.speaker} onChange={e => setDraft({ ...draft, speaker: e.target.value })} placeholder="Speaker (optional)" className="glass rounded-xl px-4 py-2.5 text-sm bg-transparent outline-none" /><input value={draft.videoUrl} onChange={e => setDraft({ ...draft, videoUrl: e.target.value })} placeholder="Video URL (optional)" className="glass rounded-xl px-4 py-2.5 text-sm bg-transparent outline-none" /><input value={draft.documentUrl} onChange={e => setDraft({ ...draft, documentUrl: e.target.value })} placeholder="Document URL (optional)" className="glass rounded-xl px-4 py-2.5 text-sm bg-transparent outline-none" /><input value={draft.thumb} onChange={e => setDraft({ ...draft, thumb: e.target.value })} placeholder="Thumbnail URL (optional)" className="glass rounded-xl px-4 py-2.5 text-sm bg-transparent outline-none" /><button className="btn-phoenix rounded-full px-5 py-2.5 text-sm sm:col-span-2 flex items-center justify-center gap-2">{editingId ? <><Edit3 className="w-4 h-4" /> Save changes</> : <><Plus className="w-4 h-4" /> Add career resource</>}</button></form>}<div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">{items.length === 0 && <div className="glass rounded-2xl p-8 text-center text-sm text-muted-foreground sm:col-span-2 lg:col-span-3">No additional career resources yet.</div>}{items.map((item, i) => <CareerResourceCard key={item.id} item={item} index={i} isAdmin={isAdmin} onEdit={() => edit(item)} onDelete={() => careerVideoStore.update(p => p.filter(x => x.id !== item.id))} onView={(url, title) => setViewing({ url, title })} />)}</div>{viewing && <DrivePdfViewer url={viewing.url} title={viewing.title} onClose={() => setViewing(null)} />}</div>;
-}
+  const items = careerVideoStore.use();
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [draft, setDraft] = useState({ title: "", speaker: "", videoUrl: "", documentUrl: "", thumb: "" });
 
-function CareerResourceCard({ item, index, isAdmin, onEdit, onDelete, onView }: { item: any; index: number; isAdmin: boolean; onEdit: () => void; onDelete: () => void; onView: (url: string, title: string) => void }) {
-  const isVideo = !!item.videoUrl;
-  return <div className="glass rounded-2xl overflow-hidden group relative">{isVideo ? <div className="aspect-video relative" style={{ background: item.thumb ? `url(${item.thumb}) center/cover` : "linear-gradient(135deg, oklch(0.3 0.08 30), oklch(0.2 0.05 25))" }}><div className="absolute inset-0 grid place-items-center bg-black/20"><Video className="w-10 h-10 text-rose-gold" strokeWidth={1.2} /></div><a href={normalizeUrl(item.videoUrl)} target="_blank" rel="noreferrer" className="absolute inset-0" aria-label={`Open ${item.title}`} /></div> : <div className="aspect-video relative bg-black/10"><div className="absolute inset-0 grid place-items-center"><FileText className="w-10 h-10 text-rose-gold" strokeWidth={1.2} /></div></div>}<div className="p-4"><div className="font-serif text-lg leading-tight">{item.title}</div>{item.speaker && <div className="text-xs text-muted-foreground mt-1">{item.speaker}</div>}{item.documentUrl && <div className="mt-3">{index < 2 ? (isDriveUrl(item.documentUrl) ? <button onClick={() => onView(item.documentUrl, item.title)} className="btn-phoenix rounded-full px-4 py-2 text-xs flex items-center gap-1.5"><Eye className="w-3 h-3" /> View document</button> : <a href={normalizeUrl(item.documentUrl)} target="_blank" rel="noreferrer" className="btn-ghost-gold rounded-full px-4 py-2 text-xs inline-flex items-center gap-1.5"><FileText className="w-3 h-3" /> Open document</a>) : <PaidGate label="Locked" className="inline-block"><a href={normalizeUrl(item.documentUrl)} target="_blank" rel="noreferrer" className="btn-ghost-gold rounded-full px-4 py-2 text-xs inline-flex items-center gap-1.5"><FileText className="w-3 h-3" /> Open document</a></PaidGate>}</div>}</div>{isAdmin && <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition"><button onClick={onEdit} title="Edit resource" className="glass-strong rounded-full p-1.5 text-muted-foreground hover:text-rose-gold"><Edit3 className="w-3.5 h-3.5" /></button><button onClick={onDelete} title="Remove resource" className="glass-strong rounded-full p-1.5 text-muted-foreground hover:text-crimson"><Trash2 className="w-3.5 h-3.5" /></button></div>}</div>;
+  const reset = () => {
+    setEditingId(null);
+    setDraft({ title: "", speaker: "", videoUrl: "", documentUrl: "", thumb: "" });
+  };
+  const edit = (item: any) => {
+    setEditingId(item.id);
+    setDraft({ title: item.title || "", speaker: item.speaker || "", videoUrl: item.videoUrl || "", documentUrl: item.documentUrl || "", thumb: item.thumb || "" });
+  };
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!draft.title) return;
+    careerVideoStore.update(prev => editingId
+      ? prev.map(x => x.id === editingId ? { ...x, ...draft } : x)
+      : [...prev, { id: uid(), ...draft }]);
+    reset();
+  };
+
+  return (
+    <div className="mt-10 pt-8 border-t border-white/5">
+      <div className="mb-4">
+        <div className="text-xs font-mono uppercase tracking-widest text-rose-gold">Additional career resources</div>
+        <h3 className="font-serif text-2xl">Guides, talks & documents</h3>
+      </div>
+      {isAdmin && (
+        <form onSubmit={submit} className="glass-strong rounded-2xl p-4 mb-5 grid sm:grid-cols-2 gap-3">
+          <div className="sm:col-span-2 flex items-center justify-between">
+            <span className="text-xs uppercase tracking-widest font-mono text-rose-gold">{editingId ? "Edit career resource" : "Add career resource"}</span>
+            {editingId && <button type="button" onClick={reset} className="text-xs text-muted-foreground flex items-center gap-1"><X className="w-3 h-3" /> Cancel</button>}
+          </div>
+          <input value={draft.title} onChange={e => setDraft({ ...draft, title: e.target.value })} placeholder="Title" className="glass rounded-xl px-4 py-2.5 text-sm bg-transparent outline-none" />
+          <input value={draft.speaker} onChange={e => setDraft({ ...draft, speaker: e.target.value })} placeholder="Speaker (optional)" className="glass rounded-xl px-4 py-2.5 text-sm bg-transparent outline-none" />
+          <input value={draft.videoUrl} onChange={e => setDraft({ ...draft, videoUrl: e.target.value })} placeholder="Video URL (optional)" className="glass rounded-xl px-4 py-2.5 text-sm bg-transparent outline-none" />
+          <input value={draft.documentUrl} onChange={e => setDraft({ ...draft, documentUrl: e.target.value })} placeholder="Document URL (optional)" className="glass rounded-xl px-4 py-2.5 text-sm bg-transparent outline-none" />
+          <input value={draft.thumb} onChange={e => setDraft({ ...draft, thumb: e.target.value })} placeholder="Thumbnail URL (optional)" className="glass rounded-xl px-4 py-2.5 text-sm bg-transparent outline-none" />
+          <button className="btn-phoenix rounded-full px-5 py-2.5 text-sm sm:col-span-2 flex items-center justify-center gap-2">{editingId ? <><Edit3 className="w-4 h-4" /> Save changes</> : <><Plus className="w-4 h-4" /> Add career resource</>}</button>
+        </form>
+      )}
+      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {items.length === 0 && <div className="glass rounded-2xl p-8 text-center text-sm text-muted-foreground sm:col-span-2 lg:col-span-3">No additional career resources yet.</div>}
+        {items.map(item => (
+          <div key={item.id} className="glass rounded-2xl overflow-hidden group relative">
+            {item.videoUrl
+              ? <div className="aspect-video relative"><div className="absolute inset-0 grid place-items-center"><Video className="w-10 h-10 text-rose-gold" /></div><a href={normalizeUrl(item.videoUrl)} target="_blank" rel="noreferrer" className="absolute inset-0" aria-label={`Open ${item.title}`} /></div>
+              : <div className="aspect-video relative"><div className="absolute inset-0 grid place-items-center"><FileText className="w-10 h-10 text-rose-gold" /></div></div>}
+            <div className="p-4">
+              <div className="font-serif text-lg leading-tight">{item.title}</div>
+              {item.speaker && <div className="text-xs text-muted-foreground mt-1">{item.speaker}</div>}
+              {item.documentUrl && <div className="mt-3"><a href={normalizeUrl(item.documentUrl)} target="_blank" rel="noreferrer" className="btn-ghost-gold rounded-full px-4 py-2 text-xs inline-flex items-center gap-1.5"><FileText className="w-3 h-3" /> Open document</a></div>}
+            </div>
+            {isAdmin && <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition">
+              <button onClick={() => edit(item)} title="Edit resource" className="glass-strong rounded-full p-1.5 text-muted-foreground hover:text-rose-gold"><Edit3 className="w-3.5 h-3.5" /></button>
+              <button onClick={() => careerVideoStore.update(p => p.filter(x => x.id !== item.id))} title="Remove resource" className="glass-strong rounded-full p-1.5 text-muted-foreground hover:text-crimson"><Trash2 className="w-3.5 h-3.5" /></button>
+            </div>}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
