@@ -1,13 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Navbar } from "@/components/site/Navbar";
 import { useAuth } from "@/lib/auth";
-import { useEffect, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useState } from "react";
+import { motion } from "framer-motion";
 import { Gavel, Brain, Plus, Trash2, FileText, MessageSquare, Send, Image as ImageIcon, Video as VideoIcon, Link as LinkIcon } from "lucide-react";
 import { munStore, munDebateStore, munCommentStore, grantXP, type MunItem, type MunDebate, type MunComment } from "@/stores";
 import { uid } from "@/lib/local-store";
 import { toast } from "sonner";
-
 
 export const Route = createFileRoute("/_authenticated/mun")({
   ssr: false,
@@ -16,7 +15,7 @@ export const Route = createFileRoute("/_authenticated/mun")({
 });
 
 function MunPage() {
-  const { user, isAdmin, isPaid } = useAuth();
+  const { user, isAdmin } = useAuth();
   const items = munStore.use();
   const debates = munDebateStore.use();
   const comments = munCommentStore.use();
@@ -31,7 +30,7 @@ function MunPage() {
             <p className="text-xs font-mono uppercase tracking-widest text-rose-gold">mun & debate section</p>
             <h1 className="font-serif text-4xl mt-1">Voice. Listen. Defend gently.</h1>
           </div>
-          
+
           <div className="flex bg-foreground/5 p-1 rounded-full w-fit">
             <button
               onClick={() => setTab("topics")}
@@ -58,7 +57,7 @@ function MunPage() {
         {tab === "debates" && (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
             <DebateForm user={user} />
-            <DebateList debates={debates} comments={comments} isAdmin={isAdmin} isPaid={isPaid} user={user} />
+            <DebateList debates={debates} comments={comments} isAdmin={isAdmin} user={user} />
           </motion.div>
         )}
       </div>
@@ -72,7 +71,7 @@ function DebateForm({ user }: { user: any }) {
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!draft.topic.trim() || !draft.body.trim()) return;
+    if (!draft.topic.trim() || !draft.body.trim() || !user) return;
     munDebateStore.update(p => [{
       id: uid(),
       topic: draft.topic.trim(),
@@ -85,14 +84,15 @@ function DebateForm({ user }: { user: any }) {
     }, ...p]);
     setDraft({ topic: "", body: "", mediaUrl: "", mediaType: "image" });
     setShowMedia(false);
-    
+
     grantXP(user, 15);
-    toast.success("Debate posted! +15 XP 🗣️");
+    toast.success("Debate shared! +15 XP 🗣️");
   }
 
   return (
     <form onSubmit={submit} className="glass-strong rounded-2xl p-5 mb-8">
-      <div className="font-serif text-xl mb-4 text-gradient-gold">Start a debate</div>
+      <div className="font-serif text-xl mb-1 text-gradient-gold">Start a debate</div>
+      <p className="text-xs text-muted-foreground mb-4">Share a topic or viewpoint. Other SkillNests users can read it and reply in the discussion.</p>
       <div className="space-y-3">
         <input value={draft.topic} onChange={e => setDraft(d => ({ ...d, topic: e.target.value }))} placeholder="What is your stance or topic?" className="w-full glass rounded-xl px-4 py-3 text-sm bg-transparent outline-none" />
         <textarea value={draft.body} onChange={e => setDraft(d => ({ ...d, body: e.target.value }))} placeholder="Elaborate on your points... be respectful." rows={4} className="w-full glass rounded-xl px-4 py-3 text-sm bg-transparent outline-none resize-none" />
@@ -106,14 +106,14 @@ function DebateForm({ user }: { user: any }) {
         )}
         <div className="flex justify-between items-center mt-2">
           <button type="button" onClick={() => setShowMedia(!showMedia)} className="text-xs text-muted-foreground hover:text-rose-gold transition flex items-center gap-1"><ImageIcon className="w-3.5 h-3.5" /> Add Media</button>
-          <button type="submit" className="btn-phoenix rounded-full px-6 py-2.5 text-sm flex items-center gap-2"><MessageSquare className="w-4 h-4" /> Post Article</button>
+          <button type="submit" className="btn-phoenix rounded-full px-6 py-2.5 text-sm flex items-center gap-2"><MessageSquare className="w-4 h-4" /> Share Debate</button>
         </div>
       </div>
     </form>
   );
 }
 
-function DebateList({ debates, comments, isAdmin, isPaid, user }: { debates: MunDebate[]; comments: MunComment[]; isAdmin: boolean; isPaid: boolean; user: any }) {
+function DebateList({ debates, comments, isAdmin, user }: { debates: MunDebate[]; comments: MunComment[]; isAdmin: boolean; user: any }) {
   if (debates.length === 0) return <div className="glass rounded-2xl p-10 text-center text-sm text-muted-foreground">No debates yet. Be the first to start one.</div>;
   return (
     <div className="space-y-4">
@@ -145,7 +145,7 @@ function DebateList({ debates, comments, isAdmin, isPaid, user }: { debates: Mun
                   </div>
                 ))}
               </div>
-              {(isAdmin || isPaid) ? <CommentForm debateId={d.id} user={user} /> : <div className="text-center py-3 bg-white/5 rounded-xl text-xs text-muted-foreground italic">Upgrade to premium to join the debate.</div>}
+              <CommentForm debateId={d.id} user={user} />
             </div>
           </div>
         );
@@ -161,9 +161,10 @@ function CommentForm({ debateId, user }: { debateId: string; user: any }) {
   const [showMedia, setShowMedia] = useState(false);
   function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!content.trim()) return;
+    if (!content.trim() || !user) return;
     munCommentStore.update(p => [...p, { id: uid(), debateId, authorName: user.name, authorEmail: user.email, content: content.trim(), mediaUrl: mediaUrl.trim() || undefined, mediaType: mediaUrl.trim() ? mediaType : undefined, createdAt: new Date().toISOString() }]);
     setContent(""); setMediaUrl(""); setShowMedia(false);
+    toast.success("Reply added to the discussion.");
   }
   return (
     <form onSubmit={submit} className="flex flex-col gap-2">
