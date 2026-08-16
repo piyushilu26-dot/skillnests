@@ -12,7 +12,7 @@ export type CareerGuide = {
 };
 
 export const careerGuideStore = createLocalStore<CareerGuide[]>(
-  "sn-career-guides",
+  "sn-career-guides-v2",
   [
     { id: "career-data-scientist", kind: "career-guide", interest: "Tech & Computing", title: "Data Scientist", speaker: "SkillNests Career Guide", documentUrl: "/career-guides/01-data-scientist.html", isPaid: false },
     { id: "career-software-engineer", kind: "career-guide", interest: "Tech & Computing", title: "Software Engineer", speaker: "SkillNests Career Guide", documentUrl: "/career-guides/02-software-engineer.html", isPaid: false },
