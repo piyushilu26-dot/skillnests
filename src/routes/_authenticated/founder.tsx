@@ -49,12 +49,12 @@ function FounderPage() {
             const founders = [
               { name: "Piyush Raj", photo: founderPhoto, bio: "I've always felt a need for change in our education system, so I decided to build SkillNests so students can get access to everything while connecting with their peers.", email: "piyushilu26@gmail.com" },
               { name: "Miska Rai", photo: miskaPhoto, bio: "Finally it's time that we take a step towards skillnests.in.", email: "raimiska.8579@gmail.com" },
-              { name: "Anant Arya", photo: anantPhoto, bio: "Finally it's time that we take a step towards skillnests.in.", email: "bachcha690@gmail.com" },
+              { name: "Sanvi Kumar", photo: sanviPhoto, bio: "Finally it's time that we take a step towards skillnests.in.", email: "sanvi.kumarstm@gmail.com" },
               { name: "Abhinav Pratap", photo: abhinavPhoto, bio: "Let's come together at skillnests.in and escape the matrix. Let's make education more interactive.", email: "abhinavpratap666@gmail.com" },
+              { name: "Anant Arya", photo: anantPhoto, bio: "Finally it's time that we take a step towards skillnests.in.", email: "bachcha690@gmail.com" },
             ];
             
             const coreMembers = [
-              { name: "Sanvi Kumar", photo: sanviPhoto, bio: "Finally it's time that we take a step towards skillnests.in.", email: "sanvi.kumarstm@gmail.com" },
               { name: "Arav Raj", photo: aravPhoto, bio: "Building initiatives that create opportunities and positive impact for students and society join us in skillnest", email: "aravrajraj842@gmail.com" },
             ];
 
