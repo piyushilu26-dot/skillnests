@@ -1,19 +1,110 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Navbar } from "@/components/site/Navbar";
 import { useAuth } from "@/lib/auth";
-import { useEffect, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Gavel, Brain, Plus, Trash2, FileText, MessageSquare, Send, Image as ImageIcon, Video as VideoIcon, Link as LinkIcon } from "lucide-react";
+import { useState } from "react";
+import { motion } from "framer-motion";
+import { Gavel, Brain, Plus, Trash2, FileText, MessageSquare, Send, Image as ImageIcon, Link as LinkIcon } from "lucide-react";
 import { munStore, munDebateStore, munCommentStore, grantXP, type MunItem, type MunDebate, type MunComment } from "@/stores";
 import { uid } from "@/lib/local-store";
 import { toast } from "sonner";
-
 
 export const Route = createFileRoute("/_authenticated/mun")({
   ssr: false,
   head: () => ({ meta: [{ title: "SkillNests" }] }),
   component: MunPage,
 });
+
+type DebateTopic = {
+  title: string;
+  scope: "Global" | "India";
+  context: string;
+  viewA: string;
+  viewB: string;
+  question: string;
+};
+
+const CURATED_DEBATE_TOPICS: DebateTopic[] = [
+  {
+    title: "Should AI development be governed by binding global rules?",
+    scope: "Global",
+    context: "AI is advancing faster than many regulatory systems, raising questions about safety, accountability, jobs, privacy and unequal access.",
+    viewA: "For: Common international standards could reduce dangerous misuse, improve transparency and protect rights across borders.",
+    viewB: "Against: Overly rigid rules could slow beneficial innovation and disadvantage countries or smaller firms with fewer resources.",
+    question: "What minimum global safeguards are necessary without blocking responsible innovation?",
+  },
+  {
+    title: "Should wealthy countries bear a larger share of the cost of climate action?",
+    scope: "Global",
+    context: "Climate policy involves both current emissions and historical contributions, while developing countries still seek economic growth and energy access.",
+    viewA: "For: Greater financial and technological support from wealthier countries can reflect historical responsibility and help developing economies transition.",
+    viewB: "Against: Current and future major emitters also need substantial responsibility, and every country should contribute according to present capacity.",
+    question: "How should responsibility be divided fairly among historical and current emitters?",
+  },
+  {
+    title: "How should states balance border security with protection of refugees and migrants?",
+    scope: "Global",
+    context: "Conflict, persecution, economic pressures and climate-related displacement are increasing pressure on migration systems.",
+    viewA: "For stronger protection: Humanitarian obligations require safe asylum systems and protection for people fleeing serious danger.",
+    viewB: "For stronger controls: Governments need workable borders, identity checks and sustainable public services while processing claims fairly.",
+    question: "Can security screening and humanitarian protection be designed to reinforce rather than undermine each other?",
+  },
+  {
+    title: "Is nuclear deterrence compatible with long-term global security?",
+    scope: "Global",
+    context: "Nuclear weapons are argued to deter major wars, while their existence creates risks of escalation, accidents and proliferation.",
+    viewA: "Deterrence view: A credible nuclear capability may discourage direct attacks between nuclear-armed states.",
+    viewB: "Disarmament view: Dependence on nuclear deterrence creates catastrophic risks and makes international disarmament and verification essential.",
+    question: "Should states prioritize gradual disarmament, stronger arms control, or continued deterrence?",
+  },
+  {
+    title: "Do tariffs and protectionism help countries build stronger economies?",
+    scope: "Global",
+    context: "Governments use tariffs to protect domestic industries, manage strategic dependencies and respond to trade imbalances, but tariffs can also raise costs.",
+    viewA: "For: Temporary protection can help emerging or strategic industries develop resilience and reduce dependence on vulnerable supply chains.",
+    viewB: "Against: Higher trade barriers can increase prices, reduce efficiency and provoke retaliation that hurts exporters and consumers.",
+    question: "When, if ever, is protectionism justified in an interconnected global economy?",
+  },
+  {
+    title: "Should India impose stronger transparency rules on political funding?",
+    scope: "India",
+    context: "Political finance is central to electoral competition. The Supreme Court struck down the electoral-bond scheme in 2024, and debates continue over transparency and donor privacy.",
+    viewA: "For: Voters need meaningful information about political funding so they can assess potential conflicts of interest and influence.",
+    viewB: "Caution: Donor privacy can protect political participation, and disclosure rules should avoid exposing individuals to intimidation or retaliation.",
+    question: "What level of donor disclosure best balances transparency, privacy and democratic participation?",
+  },
+  {
+    title: "Does India's anti-defection law protect stability at the cost of legislative independence?",
+    scope: "India",
+    context: "The Tenth Schedule aims to discourage party switching, but disputes over disqualification, mergers and the role of Speakers continue to raise constitutional questions.",
+    viewA: "For the law: It protects voters from opportunistic defections and helps elected governments maintain legislative stability.",
+    viewB: "Reform view: Broad party-control mechanisms can weaken individual legislators' ability to exercise independent judgment on legislation.",
+    question: "Should disqualification decisions remain with the Speaker, or should an independent mechanism decide them?",
+  },
+  {
+    title: "Should India rethink the balance between population-based representation and federalism?",
+    scope: "India",
+    context: "Future delimitation raises questions about how parliamentary representation should reflect population while respecting states' different demographic trajectories and federal interests.",
+    viewA: "Population view: Democratic representation should broadly reflect current population so citizens have comparable representation.",
+    viewB: "Federal-balance view: States that successfully reduced population growth should not feel politically penalized for doing so.",
+    question: "What formula could protect both democratic equality and India's federal balance?",
+  },
+  {
+    title: "How should India address judicial delays while preserving judicial independence?",
+    scope: "India",
+    context: "Large case backlogs and limited judicial capacity can delay justice, while reforms must preserve fair procedure and institutional independence.",
+    viewA: "Reform view: More judges, better court infrastructure, case-management systems and procedural reforms can improve access to justice.",
+    viewB: "Independence caution: Efficiency reforms should not become mechanisms for political pressure or compromise judicial decision-making.",
+    question: "Which reforms can improve speed and access without weakening judicial independence?",
+  },
+  {
+    title: "Should India introduce stronger measures to reduce the criminalization of politics?",
+    scope: "India",
+    context: "Debate continues over candidates facing criminal cases, the presumption of innocence, voter choice and the role of political parties in candidate selection.",
+    viewA: "For stronger safeguards: Faster trials and greater disclosure can help voters evaluate candidates and discourage serious wrongdoing from entering politics.",
+    viewB: "Due-process caution: Allegations are not convictions, so restrictions based solely on pending cases could undermine the presumption of innocence and political choice.",
+    question: "Should reforms focus on faster trials, disclosure, party accountability, or eligibility rules?",
+  },
+];
 
 function MunPage() {
   const { user, isAdmin, isPaid } = useAuth();
@@ -57,12 +148,48 @@ function MunPage() {
 
         {tab === "debates" && (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
+            <CuratedDebateTopics />
             <DebateForm user={user} />
             <DebateList debates={debates} comments={comments} isAdmin={isAdmin} isPaid={isPaid} user={user} />
           </motion.div>
         )}
       </div>
     </main>
+  );
+}
+
+function CuratedDebateTopics() {
+  return (
+    <section className="mb-8">
+      <div className="glass-strong rounded-3xl p-6 sm:p-8">
+        <div className="flex items-start justify-between gap-4 mb-6">
+          <div>
+            <p className="text-xs font-mono uppercase tracking-widest text-rose-gold">curated debate prompts</p>
+            <h2 className="font-serif text-3xl mt-1">10 issues worth debating</h2>
+            <p className="text-sm text-muted-foreground mt-2 max-w-3xl leading-relaxed">Five global issues and five major Indian political-system questions. Each prompt presents competing arguments rather than endorsing a side.</p>
+          </div>
+          <Gavel className="w-7 h-7 text-rose-gold shrink-0" strokeWidth={1.2} />
+        </div>
+        <div className="grid lg:grid-cols-2 gap-4">
+          {CURATED_DEBATE_TOPICS.map((topic, index) => (
+            <article key={topic.title} className="glass rounded-2xl p-5">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-[10px] font-mono uppercase tracking-widest text-rose-gold">{String(index + 1).padStart(2, "0")}</span>
+                <span className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">{topic.scope}</span>
+              </div>
+              <h3 className="font-serif text-xl leading-snug mb-3">{topic.title}</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed mb-4">{topic.context}</p>
+              <div className="space-y-2 text-xs leading-relaxed">
+                <div className="rounded-xl bg-white/5 p-3"><span className="text-rose-gold font-medium">View A · </span>{topic.viewA}</div>
+                <div className="rounded-xl bg-white/5 p-3"><span className="text-rose-gold font-medium">View B · </span>{topic.viewB}</div>
+              </div>
+              <div className="mt-4 pt-3 border-t border-white/5 text-xs text-foreground/80"><span className="text-rose-gold font-medium">Question: </span>{topic.question}</div>
+            </article>
+          ))}
+        </div>
+        <p className="text-[11px] text-muted-foreground mt-5 leading-relaxed">Research basis: United Nations global-issues and AI-governance materials; UNCTAD's 2026 global economic outlook; and current Indian polity discussions on electoral funding, anti-defection, federalism, judicial capacity and political accountability. Students should consult primary sources and multiple viewpoints before using these prompts in formal MUN or debate.</p>
+      </div>
+    </section>
   );
 }
 
@@ -173,7 +300,6 @@ function DebateList({ debates, comments, isAdmin, isPaid, user }: { debates: Mun
             
             {d.mediaUrl && <MediaRender url={d.mediaUrl} type={d.mediaType || "link"} />}
             
-            {/* Comments Section */}
             <div className="mt-6 pt-4 border-t border-white/5">
               <div className="text-xs font-mono uppercase tracking-widest text-muted-foreground mb-4">Discussion ({topicComments.length})</div>
               
@@ -290,7 +416,6 @@ function MediaRender({ url, type, small = false }: { url: string; type: "image" 
   }
   
   if (type === "video") {
-    // If it's a youtube link, convert to embed. Otherwise render video tag.
     const ytMatch = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))((\w|-){11})/);
     if (ytMatch) {
       return (
