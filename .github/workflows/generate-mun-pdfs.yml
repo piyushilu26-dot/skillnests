@@ -83,11 +83,22 @@ jobs:
               s=s.replace('function DebateForm(',component+'function DebateForm(',1)
               p.write_text(s,encoding="utf-8")
           PY
+      - name: Configure two free career resources
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path("src/routes/_authenticated/career-guidance.tsx")
+          s=p.read_text(encoding="utf-8")
+          old='index === 0 ? (isDriveUrl(item.documentUrl)'
+          new='index < 2 ? (isDriveUrl(item.documentUrl)'
+          if old in s:
+              p.write_text(s.replace(old,new,1),encoding="utf-8")
+          PY
       - name: Commit generated PDFs and UI changes
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add public/mun-committee-pdfs scripts src/routes/_authenticated/mun.tsx
+          git add public/mun-committee-pdfs scripts src/routes/_authenticated/mun.tsx src/routes/_authenticated/career-guidance.tsx
           git diff --cached --quiet && exit 0
-          git commit -m "Add MUN committee PDF guides"
+          git commit -m "Add MUN guides and gate career resources"
           git push
