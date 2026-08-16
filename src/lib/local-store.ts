@@ -23,13 +23,99 @@ import { authApi, type AuthUser } from "./auth";
 
 type WithId = { id: string } & Record<string, unknown>;
 
+const starterDebates: WithId[] = [
+  {
+    id: "starter-cjp-change",
+    topic: "Is CJP a group that genuinely wants change, or is it mainly ideological?",
+    authorEmail: "starter@skillnests.in",
+    authorName: "SkillNests Debate",
+    body: "Discuss the goals, methods and public perception of CJP. What evidence would support either interpretation? Consider the difference between ideological positioning and concrete policy change. Present evidence for your view and respond to opposing arguments.",
+    createdAt: "2026-08-15T03:33:04.000Z",
+  },
+  {
+    id: "starter-reservation-policy",
+    topic: "Is India's current reservation policy justified in its present form?",
+    authorEmail: "starter@skillnests.in",
+    authorName: "SkillNests Debate",
+    body: "Should reservation continue in its current structure, be expanded, be redesigned around different indicators, or be gradually reduced? Discuss social justice, historical disadvantage, representation, merit, economic conditions and access to opportunity. Support your position with evidence and address the strongest counterargument.",
+    createdAt: "2026-08-15T03:32:00.000Z",
+  },
+  {
+    id: "starter-ai-jobs",
+    topic: "Should governments regulate AI development more aggressively even if it slows innovation?",
+    authorEmail: "starter@skillnests.in",
+    authorName: "SkillNests Debate",
+    body: "Debate the trade-off between innovation, employment, privacy, safety and accountability. What level of regulation is reasonable, and who should set the rules?",
+    createdAt: "2026-08-14T03:30:00.000Z",
+  },
+  {
+    id: "starter-climate-responsibility",
+    topic: "Should countries that historically emitted more greenhouse gases bear a larger share of climate costs?",
+    authorEmail: "starter@skillnests.in",
+    authorName: "SkillNests Debate",
+    body: "Consider historical emissions, present-day development needs, per-capita emissions and the ability to pay. Argue whether responsibility should be distributed equally or differently.",
+    createdAt: "2026-08-13T03:30:00.000Z",
+  },
+  {
+    id: "starter-refugee-policy",
+    topic: "Should states prioritize stronger border controls or greater protection for refugees?",
+    authorEmail: "starter@skillnests.in",
+    authorName: "SkillNests Debate",
+    body: "Explore humanitarian obligations, national security, economic capacity and international responsibility. What policy could balance these competing concerns?",
+    createdAt: "2026-08-12T03:30:00.000Z",
+  },
+  {
+    id: "starter-political-funding",
+    topic: "Should political funding in India have stricter transparency requirements?",
+    authorEmail: "starter@skillnests.in",
+    authorName: "SkillNests Debate",
+    body: "Debate whether greater disclosure of political donations would strengthen democracy and accountability, and how transparency rules could protect legitimate donors while reducing undue influence.",
+    createdAt: "2026-08-11T03:30:00.000Z",
+  },
+  {
+    id: "starter-anti-defection",
+    topic: "Does India's anti-defection law strengthen political stability or weaken legislators' independence?",
+    authorEmail: "starter@skillnests.in",
+    authorName: "SkillNests Debate",
+    body: "Consider party discipline, voter mandates, government stability and the freedom of elected representatives to disagree with their parties. Should the law be changed, narrowed or retained?",
+    createdAt: "2026-08-10T03:30:00.000Z",
+  },
+  {
+    id: "starter-federalism",
+    topic: "Does India need a stronger federal balance between the Union and the states?",
+    authorEmail: "starter@skillnests.in",
+    authorName: "SkillNests Debate",
+    body: "Discuss fiscal powers, legislative responsibilities, national standards and state autonomy. Which areas require stronger central coordination, and where should states have greater discretion?",
+    createdAt: "2026-08-09T03:30:00.000Z",
+  },
+  {
+    id: "starter-education-reform",
+    topic: "Should Indian schools place more weight on skills and projects than high-stakes examinations?",
+    authorEmail: "starter@skillnests.in",
+    authorName: "SkillNests Debate",
+    body: "Compare standardized examinations with project-based learning, practical skills and continuous assessment. Consider fairness, scalability, academic rigor and preparation for higher education.",
+    createdAt: "2026-08-08T03:30:00.000Z",
+  },
+  {
+    id: "starter-social-media-democracy",
+    topic: "Does social media strengthen democratic participation more than it harms public discourse?",
+    authorEmail: "starter@skillnests.in",
+    authorName: "SkillNests Debate",
+    body: "Consider political participation, access to information, misinformation, polarization and algorithmic amplification. Argue which effects are most significant and what safeguards, if any, are justified.",
+    createdAt: "2026-08-07T03:30:00.000Z",
+  },
+];
+
 export function createLocalStore<T extends WithId[]>(
   collectionName: string, 
   initial: T,
   buildQuery?: (col: ReturnType<typeof collection>, user: AuthUser) => Query,
   notifyName?: string
 ) {
-  let cache: T = initial;
+  const effectiveInitial = (collectionName === "sn-mun-debates" && initial.length === 0
+    ? starterDebates
+    : initial) as T;
+  let cache: T = effectiveInitial;
   let started = false;
   let unsub: Unsubscribe | null = null;
   const listeners = new Set<() => void>();
@@ -51,20 +137,23 @@ export function createLocalStore<T extends WithId[]>(
 
         unsub = onSnapshot(ref, (snap) => {
           const next = snap.docs.map((d) => ({ id: d.id, ...(d.data() as object) })) as unknown as T;
+          const initialMap = new Map(effectiveInitial.map((item) => [item.id, item]));
+          for (const item of next) initialMap.set(item.id, item);
+          const merged = Array.from(initialMap.values()) as T;
           
           if (notifyName && !user.isAdmin) {
             if (seenIds) {
-              const added = next.filter((n) => !seenIds!.has(n.id));
+              const added = merged.filter((n) => !seenIds!.has(n.id));
               if (added.length > 0) {
                 toast(`Oh! The Admin added something in ${notifyName}, check it out!`, { icon: "✨" });
               }
             }
             
-            seenIds = new Set(next.map((n) => n.id));
+            seenIds = new Set(merged.map((n) => n.id));
             localStorage.setItem(storageKey, JSON.stringify(Array.from(seenIds)));
           }
 
-          cache = next;
+          cache = merged;
           listeners.forEach((l) => l());
         }, () => { /* permission errors swallowed; cache stays */ });
       } catch { /* ignore */ }
@@ -73,7 +162,7 @@ export function createLocalStore<T extends WithId[]>(
     if (authApi.current()) begin();
     authApi.subscribe(() => {
       if (authApi.current()) begin();
-      else { unsub?.(); unsub = null; cache = initial; listeners.forEach((l) => l()); }
+      else { unsub?.(); unsub = null; cache = effectiveInitial; listeners.forEach((l) => l()); }
     });
   }
 
@@ -117,7 +206,7 @@ export function createLocalStore<T extends WithId[]>(
     get: read,
     set,
     update,
-    use: () => useSyncExternalStore(subscribe, read, () => initial),
+    use: () => useSyncExternalStore(subscribe, read, () => effectiveInitial),
   };
 }
 
