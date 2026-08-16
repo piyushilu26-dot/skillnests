@@ -3,35 +3,35 @@ import { Navbar } from "@/components/site/Navbar";
 import { useAuth } from "@/lib/auth";
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Gavel, Brain, Plus, Trash2, FileText, MessageSquare, Send, Image as ImageIcon, Link as LinkIcon } from "lucide-react";
+import { Plus, Trash2, FileText, MessageSquare, Send, Image as ImageIcon, Link as LinkIcon } from "lucide-react";
 import { munStore, munDebateStore, munCommentStore, grantXP, type MunItem, type MunDebate, type MunComment } from "@/stores";
 import { uid } from "@/lib/local-store";
 import { toast } from "sonner";
 
 const MUN_GUIDES: MunItem[] = [
-  { id: "guide-unga", committee: "UNGA", title: "General Assembly", agenda: "Global political, economic, social and humanitarian issues. Learn how the committee debates, negotiates and drafts recommendations.", blocs: ["Regional groups", "Issue-based coalitions"], side: "crimson" },
-  { id: "guide-unsc", committee: "UNSC", title: "Security Council", agenda: "International peace and security, conflicts, sanctions and peacekeeping. Focus on diplomacy, security interests and realistic action.", blocs: ["P5", "Elected members", "Regional coalitions"], side: "azure" },
-  { id: "guide-unhrc", committee: "UNHRC", title: "Human Rights Council", agenda: "Human rights protection, discrimination, refugees and accountability. Delegates negotiate practical international responses.", blocs: ["Regional groups", "Human-rights coalitions"], side: "crimson" },
-  { id: "guide-ecosoc", committee: "ECOSOC", title: "Economic and Social Council", agenda: "Development, poverty, employment, health and sustainable development. Debate funding, implementation and international cooperation.", blocs: ["Regional groups", "Development coalitions"], side: "azure" },
-  { id: "guide-who", committee: "WHO", title: "World Health Organization", agenda: "Global health, pandemic preparedness and health-system resilience. Debate prevention, access, financing and coordination.", blocs: ["Regional groups", "Health-policy coalitions"], side: "crimson" },
-  { id: "guide-unep", committee: "UNEP", title: "UN Environment Programme", agenda: "Climate, pollution, biodiversity and environmental governance. Balance environmental ambition with development and financing realities.", blocs: ["Regional groups", "Climate/environment coalitions"], side: "azure" },
-  { id: "guide-unwomen", committee: "UN Women", title: "UN Women", agenda: "Gender equality, participation, safety and economic opportunity. Debate measurable policies and implementation across different national contexts.", blocs: ["Regional groups", "Issue-based coalitions"], side: "crimson" },
-  { id: "guide-unicef", committee: "UNICEF", title: "UN Children's Fund", agenda: "Child rights, education, health, nutrition and protection. Focus on practical policies that improve access and reduce inequality.", blocs: ["Regional groups", "Child-rights coalitions"], side: "azure" },
-  { id: "guide-unesco", committee: "UNESCO", title: "UN Educational, Scientific and Cultural Organization", agenda: "Education, science, culture, heritage and information. Propose cooperation that respects national context and UNESCO's mandate.", blocs: ["Regional groups", "Education/culture coalitions"], side: "crimson" },
-  { id: "guide-unodc", committee: "UNODC", title: "UN Office on Drugs and Crime", agenda: "Organized crime, corruption, trafficking and criminal justice. Debate cross-border cooperation, prevention and accountable enforcement.", blocs: ["Regional groups", "Law-enforcement cooperation"], side: "azure" },
-  { id: "guide-unhabitat", committee: "UN-Habitat", title: "UN Human Settlements Programme", agenda: "Housing, urbanization, sanitation and sustainable cities. Debate infrastructure, land use, finance and inclusive urban planning.", blocs: ["Regional groups", "Urban-development coalitions"], side: "crimson" },
-  { id: "guide-ilo", committee: "ILO", title: "International Labour Organization", agenda: "Decent work, labour rights, employment and social protection. Balance worker protection, employer concerns and economic feasibility.", blocs: ["Governments", "Employers", "Workers"], side: "azure" },
-  { id: "guide-unsc-crisis", committee: "UNSC Crisis", title: "Security Council Crisis", agenda: "Rapidly evolving peace and security crises. Delegates react to updates, negotiate under pressure and manage escalation risks.", blocs: ["P5", "Regional blocs", "Crisis coalitions"], side: "crimson" },
-  { id: "guide-icc", committee: "ICC", title: "International Crisis Committee", agenda: "Fast-moving international emergencies and strategic decision-making. Procedures vary, with crisis updates requiring rapid adaptation.", blocs: ["Crisis-specific alliances"], side: "azure" },
-  { id: "guide-historical", committee: "Historical Crisis", title: "Historical Crisis Committee", agenda: "A historical crisis within its period-specific political, technological and informational constraints.", blocs: ["Historical alliances", "Crisis blocs"], side: "crimson" },
-  { id: "guide-jcc", committee: "JCC", title: "Joint Crisis Committee", agenda: "Interlinked crises where decisions in one room affect another. Coordinate internally while anticipating the other side's moves.", blocs: ["Competing sides", "Strategic alliances"], side: "azure" },
-  { id: "guide-cabinet", committee: "Cabinet / War Cabinet", title: "Cabinet / War Cabinet", agenda: "National executive response to a major political or security crisis. Debate policy, intelligence, resources and consequences.", blocs: ["Ministry portfolios", "Government coalition"], side: "crimson" },
-  { id: "guide-press", committee: "International Press", title: "International Press / Media Corps", agenda: "Reporting, interviewing and shaping the information environment during an MUN. Accuracy, investigation and conference rules are central.", blocs: ["Media teams", "Editorial desks"], side: "azure" },
-  { id: "guide-loksabha", committee: "Lok Sabha", title: "Indian Parliament — Lok Sabha", agenda: "Indian domestic policy, legislation and parliamentary debate. Delegates represent parties or MPs and negotiate policy and amendments.", blocs: ["Party alliances", "Issue-based coalitions"], side: "crimson" },
-  { id: "guide-rajyasabha", committee: "Rajya Sabha", title: "Indian Parliament — Rajya Sabha", agenda: "Legislation, federal issues and national policy. Focus on parliamentary procedure, party positions and state interests.", blocs: ["Party alliances", "State/issue coalitions"], side: "azure" },
-  { id: "guide-aippm", committee: "AIPPM", title: "All India Political Parties Meet", agenda: "Major Indian political, constitutional and governance questions. Delegates represent political parties and negotiate across competing positions.", blocs: ["Political-party blocs"], side: "crimson" },
-  { id: "guide-cabinet-india", committee: "Indian Cabinet", title: "Indian Cabinet Simulation", agenda: "Executive decision-making on national policy or crisis. Delegates work through ministry portfolios and government-wide trade-offs.", blocs: ["Ministry portfolios", "Government coalition"], side: "azure" },
-  { id: "guide-state", committee: "State Assembly", title: "State Legislative Assembly", agenda: "State-level education, health, agriculture, infrastructure and governance. Debate party priorities and the Union-state division of powers.", blocs: ["Party blocs", "Regional alliances"], side: "crimson" },
+  { id: "guide-unga", committee: "UNGA", title: "General Assembly", agenda: "Global political, economic, social and humanitarian issues. Learn how the committee debates, negotiates and drafts recommendations.", blocs: ["Regional groups", "Issue-based coalitions"], side: "crimson", documentUrl: "/mun-guides/unga.html" },
+  { id: "guide-unsc", committee: "UNSC", title: "Security Council", agenda: "International peace and security, conflicts, sanctions and peacekeeping. Focus on diplomacy, security interests and realistic action.", blocs: ["P5", "Elected members", "Regional coalitions"], side: "azure", documentUrl: "/mun-guides/unsc.html" },
+  { id: "guide-unhrc", committee: "UNHRC", title: "Human Rights Council", agenda: "Human rights protection, discrimination, refugees and accountability. Delegates negotiate practical international responses.", blocs: ["Regional groups", "Human-rights coalitions"], side: "crimson", documentUrl: "/mun-guides/unhrc.html" },
+  { id: "guide-ecosoc", committee: "ECOSOC", title: "Economic and Social Council", agenda: "Development, poverty, employment, health and sustainable development. Debate funding, implementation and international cooperation.", blocs: ["Regional groups", "Development coalitions"], side: "azure", documentUrl: "/mun-guides/ecosoc.html" },
+  { id: "guide-who", committee: "WHO", title: "World Health Organization", agenda: "Global health, pandemic preparedness and health-system resilience. Debate prevention, access, financing and coordination.", blocs: ["Regional groups", "Health-policy coalitions"], side: "crimson", documentUrl: "/mun-guides/who.html" },
+  { id: "guide-unep", committee: "UNEP", title: "UN Environment Programme", agenda: "Climate, pollution, biodiversity and environmental governance. Balance environmental ambition with development and financing realities.", blocs: ["Regional groups", "Climate/environment coalitions"], side: "azure", documentUrl: "/mun-guides/unep.html" },
+  { id: "guide-unwomen", committee: "UN Women", title: "UN Women", agenda: "Gender equality, participation, safety and economic opportunity. Debate measurable policies and implementation across different national contexts.", blocs: ["Regional groups", "Issue-based coalitions"], side: "crimson", documentUrl: "/mun-guides/unwomen.html" },
+  { id: "guide-unicef", committee: "UNICEF", title: "UN Children's Fund", agenda: "Child rights, education, health, nutrition and protection. Focus on practical policies that improve access and reduce inequality.", blocs: ["Regional groups", "Child-rights coalitions"], side: "azure", documentUrl: "/mun-guides/unicef.html" },
+  { id: "guide-unesco", committee: "UNESCO", title: "UN Educational, Scientific and Cultural Organization", agenda: "Education, science, culture, heritage and information. Propose cooperation that respects national context and UNESCO's mandate.", blocs: ["Regional groups", "Education/culture coalitions"], side: "crimson", documentUrl: "/mun-guides/unesco.html" },
+  { id: "guide-unodc", committee: "UNODC", title: "UN Office on Drugs and Crime", agenda: "Organized crime, corruption, trafficking and criminal justice. Debate cross-border cooperation, prevention and accountable enforcement.", blocs: ["Regional groups", "Law-enforcement cooperation"], side: "azure", documentUrl: "/mun-guides/unodc.html" },
+  { id: "guide-unhabitat", committee: "UN-Habitat", title: "UN Human Settlements Programme", agenda: "Housing, urbanization, sanitation and sustainable cities. Debate infrastructure, land use, finance and inclusive urban planning.", blocs: ["Regional groups", "Urban-development coalitions"], side: "crimson", documentUrl: "/mun-guides/unhabitat.html" },
+  { id: "guide-ilo", committee: "ILO", title: "International Labour Organization", agenda: "Decent work, labour rights, employment and social protection. Balance worker protection, employer concerns and economic feasibility.", blocs: ["Governments", "Employers", "Workers"], side: "azure", documentUrl: "/mun-guides/ilo.html" },
+  { id: "guide-unsc-crisis", committee: "UNSC Crisis", title: "Security Council Crisis", agenda: "Rapidly evolving peace and security crises. Delegates react to updates, negotiate under pressure and manage escalation risks.", blocs: ["P5", "Regional blocs", "Crisis coalitions"], side: "crimson", documentUrl: "/mun-guides/unsc-crisis.html" },
+  { id: "guide-icc", committee: "ICC", title: "International Crisis Committee", agenda: "Fast-moving international emergencies and strategic decision-making. Procedures vary, with crisis updates requiring rapid adaptation.", blocs: ["Crisis-specific alliances"], side: "azure", documentUrl: "/mun-guides/icc.html" },
+  { id: "guide-historical", committee: "Historical Crisis", title: "Historical Crisis Committee", agenda: "A historical crisis within its period-specific political, technological and informational constraints.", blocs: ["Historical alliances", "Crisis blocs"], side: "crimson", documentUrl: "/mun-guides/historical-crisis.html" },
+  { id: "guide-jcc", committee: "JCC", title: "Joint Crisis Committee", agenda: "Interlinked crises where decisions in one room affect another. Coordinate internally while anticipating the other side's moves.", blocs: ["Competing sides", "Strategic alliances"], side: "azure", documentUrl: "/mun-guides/jcc.html" },
+  { id: "guide-cabinet", committee: "Cabinet / War Cabinet", title: "Cabinet / War Cabinet", agenda: "National executive response to a major political or security crisis. Debate policy, intelligence, resources and consequences.", blocs: ["Ministry portfolios", "Government coalition"], side: "crimson", documentUrl: "/mun-guides/cabinet-war.html" },
+  { id: "guide-press", committee: "International Press", title: "International Press / Media Corps", agenda: "Reporting, interviewing and shaping the information environment during an MUN. Accuracy, investigation and conference rules are central.", blocs: ["Media teams", "Editorial desks"], side: "azure", documentUrl: "/mun-guides/press.html" },
+  { id: "guide-loksabha", committee: "Lok Sabha", title: "Indian Parliament — Lok Sabha", agenda: "Indian domestic policy, legislation and parliamentary debate. Delegates represent parties or MPs and negotiate policy and amendments.", blocs: ["Party alliances", "Issue-based coalitions"], side: "crimson", documentUrl: "/mun-guides/lok-sabha.html" },
+  { id: "guide-rajyasabha", committee: "Rajya Sabha", title: "Indian Parliament — Rajya Sabha", agenda: "Legislation, federal issues and national policy. Focus on parliamentary procedure, party positions and state interests.", blocs: ["Party alliances", "State/issue coalitions"], side: "azure", documentUrl: "/mun-guides/rajya-sabha.html" },
+  { id: "guide-aippm", committee: "AIPPM", title: "All India Political Parties Meet", agenda: "Major Indian political, constitutional and governance questions. Delegates represent political parties and negotiate across competing positions.", blocs: ["Political-party blocs"], side: "crimson", documentUrl: "/mun-guides/aippm.html" },
+  { id: "guide-cabinet-india", committee: "Indian Cabinet", title: "Indian Cabinet Simulation", agenda: "Executive decision-making on national policy or crisis. Delegates work through ministry portfolios and government-wide trade-offs.", blocs: ["Ministry portfolios", "Government coalition"], side: "azure", documentUrl: "/mun-guides/indian-cabinet.html" },
+  { id: "guide-state", committee: "State Assembly", title: "State Legislative Assembly", agenda: "State-level education, health, agriculture, infrastructure and governance. Debate party priorities and the Union-state division of powers.", blocs: ["Party blocs", "Regional alliances"], side: "crimson", documentUrl: "/mun-guides/state-assembly.html" },
 ];
 
 export const Route = createFileRoute("/_authenticated/mun")({
@@ -56,26 +56,13 @@ function MunPage() {
             <p className="text-xs font-mono uppercase tracking-widest text-rose-gold">mun & debate section</p>
             <h1 className="font-serif text-4xl mt-1">Voice. Listen. Defend gently.</h1>
           </div>
-
           <div className="flex bg-foreground/5 p-1 rounded-full w-fit">
             <button onClick={() => setTab("topics")} className={`px-6 py-2 rounded-full text-sm font-medium transition ${tab === "topics" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}>Topics & Blocs</button>
             <button onClick={() => setTab("debates")} className={`px-6 py-2 rounded-full text-sm font-medium transition ${tab === "debates" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}>Debate Articles</button>
           </div>
         </div>
-
-        {tab === "topics" && (
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
-            {isAdmin && <AdminForm />}
-            <Grid items={items} isAdmin={isAdmin} />
-          </motion.div>
-        )}
-
-        {tab === "debates" && (
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
-            <DebateForm user={user} />
-            <DebateList debates={debates} comments={comments} isAdmin={isAdmin} user={user} />
-          </motion.div>
-        )}
+        {tab === "topics" && <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>{isAdmin && <AdminForm />}<Grid items={items} isAdmin={isAdmin} /></motion.div>}
+        {tab === "debates" && <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}><DebateForm user={user} /><DebateList debates={debates} comments={comments} isAdmin={isAdmin} user={user} /></motion.div>}
       </div>
     </main>
   );
@@ -144,18 +131,13 @@ function Grid({ items, isAdmin }: { items: MunItem[]; isAdmin: boolean }) {
     <div key={t.id} className="glass rounded-2xl p-7 relative overflow-hidden">
       <div className="absolute top-0 left-0 right-0 h-1" style={{ background: t.side === "azure" ? "linear-gradient(90deg, transparent, rgba(90,110,170,0.7), transparent)" : "linear-gradient(90deg, transparent, rgba(220,80,80,0.7), transparent)" }} />
       {isAdmin && !t.id.startsWith("guide-") && <button onClick={() => munStore.update((p) => p.filter((x) => x.id !== t.id))} className="absolute top-3 right-3 text-muted-foreground hover:text-crimson p-1.5"><Trash2 className="w-4 h-4" /></button>}
-      <div className="flex items-start gap-4">
-        <div className="w-12 h-12 rounded-full grid place-items-center shrink-0" style={{ background: t.side === "azure" ? "rgba(90,110,170,0.12)" : "rgba(220,80,80,0.12)", border: `1px solid ${t.side === "azure" ? "rgba(90,110,170,0.35)" : "rgba(220,80,80,0.35)"}` }}>
-          {t.side === "azure" ? <Brain className="w-5 h-5 text-[#9bb0e0]" strokeWidth={1.2} /> : <Gavel className="w-5 h-5 text-[#dc8585]" strokeWidth={1.2} />}
-        </div>
-        <div className="min-w-0">
-          <div className="text-[10px] uppercase tracking-[0.3em] font-mono mb-2" style={{ color: t.side === "azure" ? "#9bb0e0" : "#dc8585" }}>{t.committee}</div>
-          <div className="font-serif text-2xl mb-2">{t.title}</div>
-          <p className="text-sm text-muted-foreground mb-3">{t.agenda}</p>
-          {t.blocs.length > 0 && <><div className="text-[10px] font-mono uppercase tracking-widest text-rose-gold mb-1">Blocs</div><div className="text-xs text-muted-foreground">{t.blocs.join(" · ")}</div></>}
-          {t.documentUrl && <a href={t.documentUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 mt-3 text-xs text-rose-gold hover:underline"><FileText className="w-3.5 h-3.5" /> View document</a>}
-          {t.id.startsWith("guide-") && <div className="mt-4 inline-flex items-center gap-1.5 text-xs text-rose-gold"><FileText className="w-3.5 h-3.5" /> Committee guide</div>}
-        </div>
+      <div className="min-w-0">
+        <div className="text-[10px] uppercase tracking-[0.3em] font-mono mb-2" style={{ color: t.side === "azure" ? "#9bb0e0" : "#dc8585" }}>{t.committee}</div>
+        <div className="font-serif text-2xl mb-2">{t.title}</div>
+        <p className="text-sm text-muted-foreground mb-3">{t.agenda}</p>
+        {t.blocs.length > 0 && <><div className="text-[10px] font-mono uppercase tracking-widest text-rose-gold mb-1">Blocs</div><div className="text-xs text-muted-foreground">{t.blocs.join(" · ")}</div></>}
+        {t.documentUrl && <a href={t.documentUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 mt-4 px-3 py-2 rounded-lg glass text-xs text-rose-gold hover:underline"><FileText className="w-3.5 h-3.5" /> View guide file</a>}
+        {t.id.startsWith("guide-") && !t.documentUrl && <div className="mt-4 inline-flex items-center gap-1.5 text-xs text-muted-foreground"><FileText className="w-3.5 h-3.5" /> Guide file unavailable</div>}
       </div>
     </div>
   ))}</div>;
