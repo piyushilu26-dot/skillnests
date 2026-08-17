@@ -9,28 +9,23 @@ SKILLNESTS FACTS (authoritative):
 
 OLYMPIAD KNOWLEDGE:
 - Understand Indian Olympiad and competitive-exam terminology, especially IOQM, IMO, IOM, NSEJS, NSEP, NSEC, NSEB, NSEA, INO/Indian National Olympiads, IAPT and HBCSE.
-- Understand that users may ask for full forms, subjects, stages, eligibility, preparation, question patterns, qualification pathways, dates, fees, conducting bodies and current rules.
 - Explain abbreviations when first used and distinguish mathematics and science pathways.
-- Current rules, dates, eligibility, fees and qualification criteria are time-sensitive. Use web search and prefer official sources such as IAPT/HBCSE when the user asks for current details. Never guess a rule when uncertain.
+- Current rules, dates, eligibility, fees and qualification criteria are time-sensitive. Use web search when needed and never guess a current rule.
 
 WORLD GENERAL KNOWLEDGE:
-- Be able to answer basic GK about countries worldwide: capitals, currencies, flags, continents, geography, major landmarks, history, government systems, science, economics and major institutions.
-- For current President, Prime Minister, monarch, head of state or head of government of ANY country, use web search whenever the answer may have changed. Never guess a current office-holder. Prefer official government or authoritative sources.
+- Answer basic GK about countries worldwide: capitals, currencies, flags, continents, geography, history, government systems, science, economics and major institutions.
+- For current office-holders, use web search when the answer may have changed. Never guess a current leader.
 
-CURRENT NEWS AND NEWSPAPERS:
-- For today's news, daily newspaper summaries, major headlines, current affairs, recent events, elections, appointments, wars, major scientific developments, sports results or anything time-sensitive, use web search.
-- If asked to review a daily newspaper, retrieve fresh current headlines and summarize the major India and world stories with dates and source context.
-- Do not claim to have reviewed a newspaper or searched the web unless the web-search tool was actually used.
-- Do not pretend that the model permanently learns or retrains from a newspaper. Instead, retrieve fresh information whenever the user asks for current news.
+CURRENT NEWS:
+- For today's news, daily newspaper summaries, current affairs, recent events, elections, appointments, wars, scientific developments or sports results, use web search.
+- Never claim to have searched the web unless the tool was actually used.
 
 BEHAVIOR:
 - Answer normal general-knowledge, academic, maths, science, writing, planning, Olympiad, current-affairs and SkillNests questions.
-- Treat supplied conversation history as one continuous conversation. Resolve references such as "it", "that", "this", "the second one", "why?", "explain more" and "what about X?" using previous turns.
-- Do not restart the conversation or repeat generic introductions on follow-ups.
-- Calculate arithmetic carefully and show concise working when useful.
-- Create useful study schedules when asked; if details are missing, make reasonable assumptions and state them briefly.
-- For current/time-sensitive questions and current country leaders, use web search.
-- Never claim to have searched the web unless the web-search tool was actually used.
+- Treat conversation history as one continuous conversation and resolve references such as "it", "that", "this", "why?", "explain more" and "what about X?" using previous turns.
+- Do not restart the conversation or repeat generic introductions.
+- Calculate arithmetic carefully.
+- Create useful study schedules when asked. If details are missing, make reasonable assumptions and state them briefly.
 - If uncertain, say what is uncertain instead of inventing an answer.
 
 STYLE:
@@ -102,7 +97,7 @@ function localFallback(message: string, history: Array<{ role?: "user" | "assist
   if (/^(who is )?(the )?(current )?(prime minister|pm) (of )?india$/.test(normalized)) return "The **Prime Minister of India is Narendra Modi**.";
   if (/^(who is )?(the )?(current )?president (of )?india$/.test(normalized)) return "The **President of India is Droupadi Murmu**.";
   if (/newton.*second law|second law.*newton|force.*mass.*acceleration/.test(normalized)) return "Newton's second law states that the net force on an object equals its mass multiplied by its acceleration: **F = ma**.";
-  if (/what is ioqm|ioqm full form|ioqm meaning/.test(normalized)) return "**IOQM** stands for **Indian Olympiad Qualifier in Mathematics**. It is part of India's mathematics Olympiad pathway. Current dates, eligibility and stages should be checked against the latest official sources.";
+  if (/what is ioqm|ioqm full form|ioqm meaning/.test(normalized)) return "**IOQM** stands for **Indian Olympiad Qualifier in Mathematics**. Current dates, eligibility and stages should be checked against the latest official sources.";
   if (/nsejs|nsep|nsec|nseb|nsea/.test(normalized)) return "**NSEJS, NSEP, NSEC, NSEB and NSEA** are National Standard Examination terms used in India's science-competition ecosystem. I can explain their full forms, subjects, eligibility, stages and preparation; current rules should be verified from official sources.";
   if (/example|real[- ]life example|give me an example|show me an example/.test(normalized)) {
     const previous = [...history].reverse().find((item) => item.role === "user" && item.content)?.content?.toLowerCase() || "";
@@ -131,27 +126,44 @@ export const Route = createFileRoute("/api/ai")({
           const history = (body.history ?? []).filter((item) => (item.role === "user" || item.role === "assistant") && typeof item.content === "string").slice(-20);
           const deterministic = localFallback(message, history);
           if (deterministic && /prime minister|pm of india|president.*india|capital of india|capital of australia|founder of skillnests|ceo of skillnests|newton.*second law|second law.*newton|ioqm|nsejs|nsep|nsec|nseb|nsea|^\s*(what is|calculate|solve|evaluate|compute)?\s*[0-9]/i.test(message)) return Response.json({ answer: deterministic, fallback: true, webUsed: false });
-          const gatewayToken = process.env.AI_GATEWAY_API_KEY || process.env.OPENAI_API_KEY || request.headers.get("x-vercel-oidc-token");
+
+          // On Vercel, AI Gateway can authenticate with the deployment's OIDC token.
+          // Keep AI_GATEWAY_API_KEY as the local-development fallback.
+          const gatewayToken = process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_OIDC_TOKEN || process.env.OPENAI_API_KEY;
           if (!gatewayToken) {
             if (deterministic) return Response.json({ answer: deterministic, fallback: true });
-            return Response.json({ error: "AI service is not configured." }, { status: 503 });
+            return Response.json({ error: "AI service is not configured. Add AI_GATEWAY_API_KEY or enable Vercel OIDC for the deployment." }, { status: 503 });
           }
+
           const sessionSeconds = Math.max(0, Math.floor(body.sessionSeconds || 0));
           const input = [
-            ...history.map((item) => ({ role: item.role as "user" | "assistant", content: [{ type: "input_text", text: item.content as string }] })),
-            { role: "user" as const, content: [{ type: "input_text" as const, text: `${message}\n\nThe user's current SkillNests session duration is ${sessionSeconds} seconds. Use this only when relevant.` }] },
+            ...history.map((item) => ({ role: item.role as "user" | "assistant", content: item.content as string })),
+            { role: "user" as const, content: `${message}\n\nThe user's current SkillNests session duration is ${sessionSeconds} seconds. Use this only when relevant.` },
           ];
-          const response = await fetch("https://ai-gateway.vercel.sh/v1/responses", {
-            method: "POST",
-            headers: { "content-type": "application/json", authorization: `Bearer ${gatewayToken}` },
-            body: JSON.stringify({ model: process.env.OPENAI_MODEL || "openai/gpt-5.5", instructions: SITE_CONTEXT, input, tools: shouldUseWebSearch(message) ? [{ type: "web_search" }] : undefined, max_output_tokens: 1400 }),
-          });
+
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 25000);
+          let response: Response;
+          try {
+            response = await fetch("https://ai-gateway.vercel.sh/v1/responses", {
+              method: "POST",
+              headers: { "content-type": "application/json", authorization: `Bearer ${gatewayToken}` },
+              body: JSON.stringify({ model: process.env.OPENAI_MODEL || "openai/gpt-5.6-sol", instructions: SITE_CONTEXT, input, tools: shouldUseWebSearch(message) ? [{ type: "web_search" }] : undefined, max_output_tokens: 1400 }),
+              signal: controller.signal,
+            });
+          } finally {
+            clearTimeout(timeout);
+          }
+
           if (!response.ok) {
             const details = await response.text();
             console.error("AI Gateway request failed", response.status, details);
             if (deterministic) return Response.json({ answer: deterministic, fallback: true });
+            if (response.status === 401) return Response.json({ error: "AI Gateway authentication is not configured. Add AI_GATEWAY_API_KEY or enable Vercel OIDC." }, { status: 503 });
+            if (response.status === 429) return Response.json({ error: "The AI service is out of quota or rate-limited. Please try again later." }, { status: 503 });
             return Response.json({ error: "The AI service returned an error. Please try again." }, { status: 502 });
           }
+
           const data = (await response.json()) as { output_text?: string; output?: Array<{ type?: string; content?: Array<{ type?: string; text?: string }> }> };
           const answer = data.output_text?.trim() || data.output?.filter((item) => item.type === "message").flatMap((item) => item.content ?? []).filter((part) => part.type === "output_text" && part.text).map((part) => part.text).join("\n").trim();
           if (!answer) {
@@ -161,7 +173,8 @@ export const Route = createFileRoute("/api/ai")({
           return Response.json({ answer, webUsed: shouldUseWebSearch(message) });
         } catch (error) {
           console.error("AI route error", error);
-          return Response.json({ error: "Unable to process the AI request." }, { status: 400 });
+          if (error instanceof DOMException && error.name === "AbortError") return Response.json({ error: "The AI request timed out. Please try again." }, { status: 504 });
+          return Response.json({ error: "Unable to process the AI request." }, { status: 500 });
         }
       },
     },
