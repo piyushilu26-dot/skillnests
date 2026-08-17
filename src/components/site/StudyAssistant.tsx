@@ -5,6 +5,7 @@ type Message = { role: "user" | "assistant"; content: string };
 
 const QUICK_PROMPTS = [
   "What can I do on SkillNests?",
+  "Who is the CEO of SkillNests?",
   "Make me a study schedule",
   "How long have I been here?",
 ];
@@ -20,6 +21,9 @@ function formatDuration(seconds: number) {
 
 function localAnswer(prompt: string, seconds: number) {
   const p = prompt.toLowerCase();
+  if (p.includes("ceo") || p.includes("founder") || p.includes("piyush")) {
+    return "Piyush Raj is the Founder & CEO of SkillNests.";
+  }
   if (p.includes("how long") || p.includes("time") || p.includes("here")) {
     return `You've been on SkillNests for ${formatDuration(seconds)} in this session. Keep an eye on the clock and take short breaks between study blocks.`;
   }
@@ -29,7 +33,7 @@ function localAnswer(prompt: string, seconds: number) {
   if (p.includes("skillnests") || p.includes("website") || p.includes("what can")) {
     return "SkillNests is a student-focused learning platform built around practical learning, collaboration, resources, career guidance and MUN material. Ask me about a feature, or tell me what you need to study and I can help you plan your time.";
   }
-  return "I’m the SkillNests Study Assistant. I can explain the website, help you plan academic time, build a study schedule, and track how long you’ve been on SkillNests.";
+  return "I’m SkillNests AI. I can answer general questions, explain SkillNests, help with academic planning, build study schedules, and track your time on the website.";
 }
 
 export function StudyAssistant() {
@@ -41,7 +45,7 @@ export function StudyAssistant() {
     {
       role: "assistant",
       content:
-        "Hi — I’m your SkillNests Study Assistant. Ask me about the website, your study schedule, or your time on SkillNests.",
+        "Hi — I’m SkillNests AI. Ask me anything, ask about SkillNests, plan your studies, or check your time on the website.",
     },
   ]);
 
@@ -94,8 +98,8 @@ export function StudyAssistant() {
         <div className="fixed bottom-24 right-4 z-[70] w-[min(420px,calc(100vw-2rem))] overflow-hidden rounded-3xl border border-rose-gold/20 bg-background/95 shadow-2xl backdrop-blur-xl">
           <div className="flex items-center justify-between border-b border-border/60 px-5 py-4">
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-rose-gold/10 text-rose-gold">
-                <Sparkles className="h-5 w-5" />
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-950 text-cyan-300 shadow-lg ring-2 ring-cyan-300/30">
+                <Bot className="h-7 w-7" strokeWidth={2.5} />
               </div>
               <div>
                 <p className="font-serif text-xl">SkillNests AI</p>
@@ -114,7 +118,7 @@ export function StudyAssistant() {
           </div>
 
           <div className="flex items-center gap-2 border-b border-border/50 px-5 py-3 text-xs text-muted-foreground">
-            <Clock3 className="h-3.5 w-3.5 text-rose-gold" />
+            <Clock3 className="h-3.5 w-3.5 text-cyan-400" />
             <span>Time on SkillNests</span>
             <span className="ml-auto font-mono text-foreground">{duration}</span>
           </div>
@@ -149,7 +153,7 @@ export function StudyAssistant() {
                 <button
                   key={prompt}
                   onClick={() => void sendMessage(prompt)}
-                  className="shrink-0 rounded-full border border-border px-3 py-1.5 text-[11px] transition hover:border-rose-gold/50 hover:text-rose-gold"
+                  className="shrink-0 rounded-full border border-border px-3 py-1.5 text-[11px] transition hover:border-cyan-400/60 hover:text-cyan-400"
                 >
                   {prompt}
                 </button>
@@ -160,22 +164,22 @@ export function StudyAssistant() {
                 e.preventDefault();
                 void sendMessage();
               }}
-              className="flex items-center gap-2 rounded-2xl border border-border bg-background px-3 py-2 focus-within:border-rose-gold/50"
+              className="flex items-center gap-2 rounded-2xl border border-border bg-background px-3 py-2 focus-within:border-cyan-400/60"
             >
               <input
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="Ask SkillNests AI…"
+                placeholder="Ask SkillNests AI anything…"
                 className="min-w-0 flex-1 bg-transparent px-1 text-sm outline-none"
                 aria-label="Ask SkillNests AI"
               />
               <button
                 type="submit"
                 disabled={!input.trim() || sending}
-                className="flex h-9 w-9 items-center justify-center rounded-xl bg-rose-gold text-white transition hover:scale-105 disabled:opacity-40"
+                className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-950 text-cyan-300 shadow-md ring-1 ring-cyan-300/30 transition hover:scale-105 hover:bg-slate-900 disabled:opacity-40"
                 aria-label="Send"
               >
-                <Send className="h-4 w-4" />
+                <Send className="h-5 w-5" strokeWidth={2.5} />
               </button>
             </form>
           </div>
@@ -184,18 +188,21 @@ export function StudyAssistant() {
 
       <div className="fixed bottom-5 right-5 z-[70] flex items-center gap-2">
         <div className="hidden items-center gap-1.5 rounded-full border border-border/70 bg-background/90 px-3 py-2 text-[11px] font-medium shadow-lg backdrop-blur-xl sm:flex">
-          <Clock3 className="h-3.5 w-3.5 text-rose-gold" />
+          <Clock3 className="h-3.5 w-3.5 text-cyan-400" />
           <span className="text-muted-foreground">On site</span>
           <span className="font-mono text-foreground">{duration}</span>
         </div>
         <button
           onClick={() => setOpen((value) => !value)}
-          className="flex items-center gap-2 rounded-full border border-rose-gold/30 bg-background/90 px-4 py-3 text-sm font-medium shadow-xl backdrop-blur-xl transition hover:-translate-y-0.5 hover:border-rose-gold/60"
+          className="flex items-center gap-3 rounded-full border border-cyan-300/40 bg-slate-950 px-5 py-3.5 text-sm font-semibold text-white shadow-xl shadow-cyan-900/20 transition hover:-translate-y-0.5 hover:border-cyan-300/80 hover:bg-slate-900"
           aria-label="Open SkillNests AI"
           aria-expanded={open}
         >
-          <Bot className="h-5 w-5 text-rose-gold" />
+          <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-cyan-300 text-slate-950 shadow-md">
+            <Bot className="h-6 w-6" strokeWidth={2.5} />
+          </span>
           <span>SkillNests AI</span>
+          <Sparkles className="h-4 w-4 text-cyan-300" />
         </button>
       </div>
     </>
