@@ -1,56 +1,38 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-const SITE_CONTEXT = `You are SkillNests AI, the general-purpose AI assistant built into SkillNests.in.
+const SITE_CONTEXT = `You are SkillNests AI, a capable general-purpose AI assistant built into SkillNests.in.
 
-SKILLNESTS FACTS (treat these as authoritative):
-- SkillNests is a student-focused learning platform designed around practical learning, collaboration, resources, career guidance, MUN material, and reducing unhealthy academic competition.
+SKILLNESTS FACTS (authoritative):
+- SkillNests is a student-focused learning platform for practical learning, collaboration, resources, career guidance, MUN material, debate topics, and academic support.
 - Piyush Raj is the Founder & CEO of SkillNests.
-- The founders/team page may contain other co-founders and core team members. Do not invent roles for them.
+- Do not invent SkillNests features, people, statistics, or policies.
 
-CAPABILITIES:
-- Answer general educational and everyday knowledge questions, not only SkillNests questions.
-- Explain concepts, help with homework/studying, brainstorming, writing, planning, and time management.
-- Create realistic academic schedules when users provide subjects, available hours, school/coaching timings, priorities, and exam dates.
-- Help users understand SkillNests and its features.
-- The user can ask how long they have been on SkillNests; the current session duration is supplied separately.
+WHAT YOU SHOULD DO:
+- Answer normal general-knowledge questions directly and accurately. You are not limited to SkillNests questions.
+- Explain academic concepts step-by-step at the user's level.
+- Solve problems when enough information is provided.
+- Brainstorm, summarize, compare, write, plan, and tutor.
+- Create useful study schedules. If the user gives enough constraints, calculate a realistic schedule. If they only say 'make me a study schedule', create a sensible starter schedule using clearly stated assumptions instead of only asking for more information.
+- Use conversation history. If the user says 'that', 'it', 'make it harder', 'continue', etc., resolve the reference from earlier messages.
+- If the user asks a current/time-sensitive question, use web search when available and distinguish current information from model knowledge.
+- Never claim that you searched the web unless the web-search tool was actually used.
 
-WEB/WIKIPEDIA BEHAVIOUR:
-- For general knowledge, use your model knowledge and any supplied external reference information.
-- A Wikipedia lookup may be supplied for the user's question. If it is supplied, use it as a reference and clearly distinguish it from your own explanation.
-- Do not claim you searched Google or Wikipedia unless the server actually supplied search/reference results.
-- For current or time-sensitive facts, say when you cannot verify the latest information rather than pretending it is current.
-- Never invent facts about SkillNests. The authoritative SkillNests facts above override general model knowledge.
+STUDY-SCHEDULE RULES:
+- Prefer sustainable study blocks with short breaks.
+- Balance new learning, active recall, practice questions, revision, and rest.
+- Never suggest extreme or unsafe study routines.
+- When details are missing, make reasonable assumptions and label them briefly.
+- Return schedules in a clear table or bullet list with times, subjects, tasks, and breaks.
 
 STYLE:
-Be concise, friendly, useful, and actionable. For study planning, encourage sustainable study habits and reasonable breaks; do not recommend extreme or unsafe study routines.`;
+- Be conversational, intelligent, and specific.
+- Do not repeat the same generic capability message.
+- Do not ask unnecessary follow-up questions when a useful answer can be given immediately.
+- For simple questions, answer simply. For complex questions, reason carefully and explain the important steps.
+- If you are uncertain, say what is uncertain rather than inventing an answer.`;
 
-async function wikipediaLookup(query: string) {
-  try {
-    const url = new URL("https://en.wikipedia.org/w/api.php");
-    url.searchParams.set("action", "query");
-    url.searchParams.set("list", "search");
-    url.searchParams.set("srsearch", query.slice(0, 200));
-    url.searchParams.set("srlimit", "3");
-    url.searchParams.set("format", "json");
-    url.searchParams.set("origin", "*");
-
-    const response = await fetch(url, {
-      headers: { "user-agent": "SkillNestsAI/1.0 (https://skillnests.in)" },
-    });
-    if (!response.ok) return "";
-
-    const data = (await response.json()) as {
-      query?: { search?: Array<{ title?: string; snippet?: string }> };
-    };
-    const results = data.query?.search ?? [];
-    if (!results.length) return "";
-
-    return results
-      .map((item) => `Wikipedia result: ${item.title ?? "Unknown"}\n${(item.snippet ?? "").replace(/<[^>]*>/g, "")}`)
-      .join("\n\n");
-  } catch {
-    return "";
-  }
+function shouldUseWebSearch(message: string) {
+  return /\b(today|tonight|yesterday|tomorrow|latest|current|recent|news|2026|this week|this month|right now|who is currently|president of|ceo of)\b/i.test(message);
 }
 
 export const Route = createFileRoute("/api/ai")({
@@ -58,20 +40,44 @@ export const Route = createFileRoute("/api/ai")({
     handlers: {
       POST: async ({ request }) => {
         try {
-          const body = (await request.json()) as { message?: string; sessionSeconds?: number };
+          const body = (await request.json()) as {
+            message?: string;
+            sessionSeconds?: number;
+            history?: Array<{ role?: "user" | "assistant"; content?: string }>;
+          };
           const message = body.message?.trim();
           if (!message) return Response.json({ error: "Message is required" }, { status: 400 });
 
           const apiKey = process.env.OPENAI_API_KEY;
           if (!apiKey) {
-            return Response.json({ error: "AI service is not configured" }, { status: 503 });
+            return Response.json(
+              { error: "AI service is not configured. Add OPENAI_API_KEY to the production environment." },
+              { status: 503 },
+            );
           }
 
           const sessionSeconds = Math.max(0, Math.floor(body.sessionSeconds || 0));
-          const wikipedia = await wikipediaLookup(message);
-          const referenceContext = wikipedia
-            ? `\n\nOPTIONAL WIKIPEDIA REFERENCE FOR THIS QUESTION:\n${wikipedia}`
-            : "";
+          const history = (body.history ?? [])
+            .filter((item) => item.role && typeof item.content === "string")
+            .slice(-12)
+            .map((item) => ({
+              role: item.role as "user" | "assistant",
+              content: [{ type: "input_text", text: item.content as string }],
+            }));
+
+          const input = [
+            { role: "system", content: [{ type: "input_text", text: SITE_CONTEXT }] },
+            ...history,
+            {
+              role: "user",
+              content: [
+                {
+                  type: "input_text",
+                  text: `${message}\n\nThe user's current SkillNests session duration is ${sessionSeconds} seconds. Use this only when relevant.`,
+                },
+              ],
+            },
+          ];
 
           const response = await fetch("https://api.openai.com/v1/responses", {
             method: "POST",
@@ -80,36 +86,29 @@ export const Route = createFileRoute("/api/ai")({
               authorization: `Bearer ${apiKey}`,
             },
             body: JSON.stringify({
-              model: process.env.OPENAI_MODEL || "gpt-5-mini",
-              input: [
-                { role: "system", content: [{ type: "input_text", text: SITE_CONTEXT }] },
-                {
-                  role: "user",
-                  content: [
-                    {
-                      type: "input_text",
-                      text: `${message}\n\nThe user's current SkillNests session duration is ${sessionSeconds} seconds. Use this only when relevant.${referenceContext}`,
-                    },
-                  ],
-                },
-              ],
-              max_output_tokens: 900,
+              model: process.env.OPENAI_MODEL || "gpt-5.6",
+              input,
+              tools: shouldUseWebSearch(message) ? [{ type: "web_search" }] : undefined,
+              max_output_tokens: 1200,
             }),
           });
 
           if (!response.ok) {
-            console.error("OpenAI request failed", response.status, await response.text());
-            return Response.json({ error: "AI service failed" }, { status: 502 });
+            const details = await response.text();
+            console.error("OpenAI request failed", response.status, details);
+            return Response.json({ error: "The AI service returned an error. Please try again." }, { status: 502 });
           }
 
           const data = (await response.json()) as { output_text?: string };
-          return Response.json({
-            answer: data.output_text || "I couldn't generate an answer right now. Please try again.",
-            wikipediaUsed: Boolean(wikipedia),
-          });
+          const answer = data.output_text?.trim();
+          if (!answer) {
+            return Response.json({ error: "The AI returned an empty response. Please try again." }, { status: 502 });
+          }
+
+          return Response.json({ answer, webUsed: shouldUseWebSearch(message) });
         } catch (error) {
           console.error("AI route error", error);
-          return Response.json({ error: "Invalid request" }, { status: 400 });
+          return Response.json({ error: "Unable to process the AI request." }, { status: 400 });
         }
       },
     },
