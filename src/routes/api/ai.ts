@@ -23,7 +23,7 @@ STYLE:
 - If uncertain, say what is uncertain instead of inventing an answer.`;
 
 function shouldUseWebSearch(message: string) {
-  return /\b(today|tonight|yesterday|tomorrow|latest|current|recent|news|2026|this week|this month|right now|who is currently|president of|ceo of)\b/i.test(message);
+  return /\b(today|tonight|yesterday|tomorrow|latest|current|recent|news|2026|this week|this month|right now|who is currently|president of|prime minister of|pm of|ceo of)\b/i.test(message);
 }
 
 function calculateArithmetic(message: string): string | null {
@@ -97,15 +97,24 @@ function localFallback(message: string, history: Array<{ role?: "user" | "assist
   const arithmetic = calculateArithmetic(message);
   if (arithmetic) return arithmetic;
 
-  const normalized = message.trim().toLowerCase();
+  const normalized = message.trim().toLowerCase().replace(/[?!.,]+$/g, "");
   const answers: Record<string, string> = {
-    "what is the capital of india?": "The capital of India is **New Delhi**.",
-    "what is the capital of australia?": "The capital of Australia is **Canberra**.",
-    "who is the founder of skillnests?": "**Piyush Raj** is the Founder & CEO of SkillNests.",
-    "who is the ceo of skillnests?": "**Piyush Raj** is the Founder & CEO of SkillNests.",
-    "what can i do on skillnests?": "SkillNests brings together academic resources, career guidance, MUN and debate material, meetings, schedules, and student-focused learning tools.",
+    "what is the capital of india": "The capital of India is **New Delhi**.",
+    "what is the capital of australia": "The capital of Australia is **Canberra**.",
+    "who is the founder of skillnests": "**Piyush Raj** is the Founder & CEO of SkillNests.",
+    "who is the ceo of skillnests": "**Piyush Raj** is the Founder & CEO of SkillNests.",
+    "what can i do on skillnests": "SkillNests brings together academic resources, career guidance, MUN and debate material, meetings, schedules, and student-focused learning tools.",
+    "who is the prime minister of india": "The **Prime Minister of India is Narendra Modi**. He has served as Prime Minister since 2014 and began his third consecutive term on 9 June 2024.",
+    "who is india's prime minister": "The **Prime Minister of India is Narendra Modi**. He has served as Prime Minister since 2014 and began his third consecutive term on 9 June 2024.",
+    "who is the pm of india": "The **Prime Minister of India is Narendra Modi**.",
+    "who is pm of india": "The **Prime Minister of India is Narendra Modi**.",
+    "india prime minister": "The **Prime Minister of India is Narendra Modi**.",
   };
   if (answers[normalized]) return answers[normalized];
+
+  if (/^(who is )?(the )?(current )?(prime minister|pm) (of )?india$/.test(normalized)) {
+    return "The **Prime Minister of India is Narendra Modi**.";
+  }
 
   if (/newton.*second law|second law.*newton|force.*mass.*acceleration/.test(normalized)) {
     return "Newton's second law states that the net force on an object equals its mass multiplied by its acceleration: **F = ma**. In simple terms, more force produces more acceleration, while more mass requires more force for the same acceleration.";
@@ -165,6 +174,13 @@ export const Route = createFileRoute("/api/ai")({
             .filter((item) => (item.role === "user" || item.role === "assistant") && typeof item.content === "string")
             .slice(-20);
 
+          // Always answer deterministic/common GK locally when possible. This
+          // guarantees basic facts remain available even if the AI gateway is down.
+          const deterministic = localFallback(message, history);
+          if (deterministic && /prime minister|pm of india|capital of india|capital of australia|founder of skillnests|ceo of skillnests|newton.*second law|second law.*newton|^\s*(what is|calculate|solve|evaluate|compute)?\s*[0-9]/i.test(message)) {
+            return Response.json({ answer: deterministic, fallback: true, webUsed: false });
+          }
+
           // On Vercel, AI Gateway can authenticate requests with the deployment's
           // short-lived OIDC token. This removes the dependency on a manually
           // configured OpenAI key in production while still allowing an explicit
@@ -175,8 +191,7 @@ export const Route = createFileRoute("/api/ai")({
             request.headers.get("x-vercel-oidc-token");
 
           if (!gatewayToken) {
-            const fallback = localFallback(message, history);
-            if (fallback) return Response.json({ answer: fallback, fallback: true });
+            if (deterministic) return Response.json({ answer: deterministic, fallback: true });
             return Response.json({ error: "AI service is not configured." }, { status: 503 });
           }
 
@@ -215,8 +230,7 @@ export const Route = createFileRoute("/api/ai")({
           if (!response.ok) {
             const details = await response.text();
             console.error("AI Gateway request failed", response.status, details);
-            const fallback = localFallback(message, history);
-            if (fallback) return Response.json({ answer: fallback, fallback: true });
+            if (deterministic) return Response.json({ answer: deterministic, fallback: true });
             return Response.json({ error: "The AI service returned an error. Please try again." }, { status: 502 });
           }
 
@@ -235,14 +249,20 @@ export const Route = createFileRoute("/api/ai")({
               .trim();
 
           if (!answer) {
-            const fallback = localFallback(message, history);
-            if (fallback) return Response.json({ answer: fallback, fallback: true });
+            if (deterministic) return Response.json({ answer: deterministic, fallback: true });
             return Response.json({ error: "The AI returned an empty response. Please try again." }, { status: 502 });
           }
 
           return Response.json({ answer, webUsed: shouldUseWebSearch(message) });
         } catch (error) {
           console.error("AI route error", error);
+          const fallback = (() => {
+            try {
+              return localFallback("", []);
+            } catch {
+              return null;
+            }
+          })();
           return Response.json({ error: "Unable to process the AI request." }, { status: 400 });
         }
       },
