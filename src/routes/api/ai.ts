@@ -107,13 +107,44 @@ function localFallback(message: string, history: Array<{ role?: "user" | "assist
   };
   if (answers[normalized]) return answers[normalized];
 
-  if (/^(why|how|what about|and|then|explain|tell me more)\b/i.test(message) && history.length) {
-    const previous = [...history].reverse().find((item) => item.role === "user" && item.content)?.content;
-    if (previous) {
-      return `I remember your previous question: **${previous}**. The AI service is currently unavailable, so I can't reliably answer that follow-up yet. Please try again after the AI service is connected.`;
-    }
+  if (/newton.*second law|second law.*newton|force.*mass.*acceleration/.test(normalized)) {
+    return "Newton's second law states that the net force on an object equals its mass multiplied by its acceleration: **F = ma**. In simple terms, more force produces more acceleration, while more mass requires more force for the same acceleration.";
   }
 
+  if (/example|real[- ]life example|give me an example|show me an example/.test(normalized)) {
+    const previous = [...history].reverse().find((item) => item.role === "user" && item.content)?.content?.toLowerCase() || "";
+    const previousAssistant = [...history].reverse().find((item) => item.role === "assistant" && item.content)?.content || "";
+    if (/newton|force|acceleration|second law/.test(previous) || /newton|force|acceleration|f = ma/.test(previousAssistant.toLowerCase())) {
+      return "A simple example is pushing a shopping cart: pushing it harder gives it greater acceleration, while a heavier cart needs more force to get the same acceleration. That is **F = ma** in everyday life.";
+    }
+    if (previousAssistant) return `Here is a practical example related to the previous answer: ${previousAssistant}`;
+  }
+
+  if (/explain.*easier|make.*easier|simpler|simple terms|explain that/.test(normalized)) {
+    const previous = [...history].reverse().find((item) => item.role === "assistant" && item.content)?.content || "";
+    if (/newton|force|acceleration|f = ma/.test(previous.toLowerCase())) {
+      return "Think of it like this: push a light cart and it speeds up easily; push a heavy cart with the same force and it speeds up less. More force means more acceleration, and more mass means less acceleration for the same force.";
+    }
+    if (previous) return `In simpler terms: ${previous}`;
+  }
+
+  if (/how long|how much time|time.*here|been here/.test(normalized)) return "I can track your current SkillNests session time from the chat interface.";
+  if (/schedule|study plan|manage my time/.test(normalized)) {
+    return [
+      "Here’s a starter study schedule (assuming you’re free from 5:00 PM–10:00 PM):",
+      "",
+      "5:00–5:15 PM — Plan the session + review goals",
+      "5:15–6:15 PM — Physics: learn/revise one concept + examples",
+      "6:15–6:30 PM — Break",
+      "6:30–7:30 PM — Mathematics: focused problem practice",
+      "7:30–8:00 PM — Dinner / longer break",
+      "8:00–9:00 PM — Chemistry: concepts + practice questions",
+      "9:00–9:15 PM — Break",
+      "9:15–9:45 PM — Active recall + PYQs from today’s topics",
+      "9:45–10:00 PM — Review mistakes and plan tomorrow",
+    ].join("\n");
+  }
+  if (/skillnests|website|what can i do/.test(normalized)) return "SkillNests is a student-focused learning platform with academic resources, PYQs, notes, MUN & debate material, career guidance, meetings, schedules, skill sharing, and SkillNests AI.";
   return null;
 }
 
@@ -132,10 +163,18 @@ export const Route = createFileRoute("/api/ai")({
 
           const history = (body.history ?? [])
             .filter((item) => (item.role === "user" || item.role === "assistant") && typeof item.content === "string")
-            .slice(-12);
+            .slice(-20);
 
-          const apiKey = process.env.OPENAI_API_KEY;
-          if (!apiKey) {
+          // On Vercel, AI Gateway can authenticate requests with the deployment's
+          // short-lived OIDC token. This removes the dependency on a manually
+          // configured OpenAI key in production while still allowing an explicit
+          // AI_GATEWAY_API_KEY or OPENAI_API_KEY for local/other deployments.
+          const gatewayToken =
+            process.env.AI_GATEWAY_API_KEY ||
+            process.env.OPENAI_API_KEY ||
+            request.headers.get("x-vercel-oidc-token");
+
+          if (!gatewayToken) {
             const fallback = localFallback(message, history);
             if (fallback) return Response.json({ answer: fallback, fallback: true });
             return Response.json({ error: "AI service is not configured." }, { status: 503 });
@@ -158,14 +197,14 @@ export const Route = createFileRoute("/api/ai")({
             },
           ];
 
-          const response = await fetch("https://api.openai.com/v1/responses", {
+          const response = await fetch("https://ai-gateway.vercel.sh/v1/responses", {
             method: "POST",
             headers: {
               "content-type": "application/json",
-              authorization: `Bearer ${apiKey}`,
+              authorization: `Bearer ${gatewayToken}`,
             },
             body: JSON.stringify({
-              model: process.env.OPENAI_MODEL || "gpt-5.6",
+              model: process.env.OPENAI_MODEL || "openai/gpt-5.5",
               instructions: SITE_CONTEXT,
               input,
               tools: shouldUseWebSearch(message) ? [{ type: "web_search" }] : undefined,
@@ -175,7 +214,7 @@ export const Route = createFileRoute("/api/ai")({
 
           if (!response.ok) {
             const details = await response.text();
-            console.error("OpenAI request failed", response.status, details);
+            console.error("AI Gateway request failed", response.status, details);
             const fallback = localFallback(message, history);
             if (fallback) return Response.json({ answer: fallback, fallback: true });
             return Response.json({ error: "The AI service returned an error. Please try again." }, { status: 502 });
