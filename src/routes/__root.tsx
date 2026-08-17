@@ -11,7 +11,7 @@ import { type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { Toaster } from "@/components/ui/sonner";
-
+import { StudyAssistant } from "@/components/site/StudyAssistant";
 
 function NotFoundComponent() {
   return (
@@ -38,8 +38,6 @@ function NotFoundComponent() {
 function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   console.error(error);
   const router = useRouter();
-
-
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
@@ -127,6 +125,7 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <Outlet />
+      <StudyAssistant />
       <Toaster />
     </QueryClientProvider>
   );
