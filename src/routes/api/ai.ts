@@ -7,96 +7,84 @@ SKILLNESTS FACTS (authoritative):
 - Piyush Raj is the Founder & CEO of SkillNests.
 - Do not invent SkillNests features, people, statistics, or policies.
 
+OLYMPIAD KNOWLEDGE:
+- Understand Indian Olympiad and competitive-exam terminology, especially IOQM, IMO, IOM, NSEJS, NSEP, NSEC, NSEB, NSEA, INO/Indian National Olympiads, IAPT and HBCSE.
+- Understand that users may ask for full forms, subjects, stages, eligibility, preparation, question patterns, qualification pathways, dates, fees, conducting bodies and current rules.
+- Explain abbreviations when first used and distinguish mathematics and science pathways.
+- Current rules, dates, eligibility, fees and qualification criteria are time-sensitive. Use web search and prefer official sources such as IAPT/HBCSE when the user asks for current details. Never guess a rule when uncertain.
+
+WORLD GENERAL KNOWLEDGE:
+- Be able to answer basic GK about countries worldwide: capitals, currencies, flags, continents, geography, major landmarks, history, government systems, science, economics and major institutions.
+- For current President, Prime Minister, monarch, head of state or head of government of ANY country, use web search whenever the answer may have changed. Never guess a current office-holder. Prefer official government or authoritative sources.
+
+CURRENT NEWS AND NEWSPAPERS:
+- For today's news, daily newspaper summaries, major headlines, current affairs, recent events, elections, appointments, wars, major scientific developments, sports results or anything time-sensitive, use web search.
+- If asked to review a daily newspaper, retrieve fresh current headlines and summarize the major India and world stories with dates and source context.
+- Do not claim to have reviewed a newspaper or searched the web unless the web-search tool was actually used.
+- Do not pretend that the model permanently learns or retrains from a newspaper. Instead, retrieve fresh information whenever the user asks for current news.
+
 BEHAVIOR:
-- Answer normal general-knowledge, academic, maths, science, writing, planning, and SkillNests questions.
-- Treat the supplied conversation history as one continuous conversation. Resolve references such as "it", "that", "this", "the second one", "why?", "explain more", and "what about X?" using the previous turns.
-- Do not restart the conversation or repeat a generic introduction on follow-up questions.
-- For arithmetic, calculate the answer carefully and show concise working when useful.
-- Create useful study schedules when asked. If details are missing, make reasonable assumptions and state them briefly.
-- For current/time-sensitive questions, use web search when available.
+- Answer normal general-knowledge, academic, maths, science, writing, planning, Olympiad, current-affairs and SkillNests questions.
+- Treat supplied conversation history as one continuous conversation. Resolve references such as "it", "that", "this", "the second one", "why?", "explain more" and "what about X?" using previous turns.
+- Do not restart the conversation or repeat generic introductions on follow-ups.
+- Calculate arithmetic carefully and show concise working when useful.
+- Create useful study schedules when asked; if details are missing, make reasonable assumptions and state them briefly.
+- For current/time-sensitive questions and current country leaders, use web search.
 - Never claim to have searched the web unless the web-search tool was actually used.
+- If uncertain, say what is uncertain instead of inventing an answer.
 
 STYLE:
-- Be conversational, intelligent, direct, and specific.
+- Conversational, intelligent, direct and specific.
 - Answer simple questions simply; explain complex questions clearly.
-- Do not ask unnecessary follow-up questions when a useful answer can be given immediately.
-- If uncertain, say what is uncertain instead of inventing an answer.`;
+- Do not ask unnecessary follow-up questions when a useful answer can be given immediately.`;
 
 function shouldUseWebSearch(message: string) {
-  return /\b(today|tonight|yesterday|tomorrow|latest|current|recent|news|2026|this week|this month|right now|who is currently|president of|prime minister of|pm of|ceo of)\b/i.test(message);
+  return /\b(today|tonight|yesterday|tomorrow|latest|current|recent|news|headlines?|newspaper|daily newspaper|2026|this week|this month|right now|who is currently|president of|prime minister of|pm of|president|prime minister|leader of|head of state|head of government|election|elected|appointed|olympiad dates|olympiad eligibility|ioqm|nsejs|nsep|nsec|nseb|nsea|ino|iapt|hbcs?e)\b/i.test(message);
 }
 
 function calculateArithmetic(message: string): string | null {
-  const match = message
-    .trim()
-    .match(/^(?:what is|calculate|solve|evaluate|compute)?\s*([0-9][0-9.\s]*(?:[+\-*/^%][0-9.\s]+)+[0-9.]?)\s*\??$/i);
+  const match = message.trim().match(/^(?:what is|calculate|solve|evaluate|compute)?\s*([0-9][0-9.\s]*(?:[+\-*/^%][0-9.\s]+)+[0-9.]?)\s*\??$/i);
   if (!match) return null;
-
   const expression = match[1].replace(/\s+/g, "");
-  if (!/[+\-*/^%]/.test(expression) || !/^[0-9.+\-*/^%()]+$/.test(expression)) return null;
-
+  if (!/^[0-9.+\-*/^%()]+$/.test(expression)) return null;
   const tokens = expression.match(/\d*\.?\d+|[+\-*/^%()]/g);
   if (!tokens) return null;
-
   const values: number[] = [];
   const operators: string[] = [];
   const precedence: Record<string, number> = { "+": 1, "-": 1, "*": 2, "/": 2, "%": 2, "^": 3 };
-
   const apply = () => {
     const op = operators.pop();
-    if (!op) throw new Error("operator");
     const b = values.pop();
     const a = values.pop();
-    if (a === undefined || b === undefined) throw new Error("operand");
+    if (!op || a === undefined || b === undefined) throw new Error("invalid expression");
     if (op === "+") values.push(a + b);
     else if (op === "-") values.push(a - b);
     else if (op === "*") values.push(a * b);
-    else if (op === "/") {
-      if (b === 0) throw new Error("division by zero");
-      values.push(a / b);
-    } else if (op === "%") values.push(a % b);
+    else if (op === "/") { if (b === 0) throw new Error("division by zero"); values.push(a / b); }
+    else if (op === "%") values.push(a % b);
     else if (op === "^") values.push(a ** b);
   };
-
   try {
     let expectValue = true;
     for (const token of tokens) {
-      if (/^\d/.test(token)) {
-        values.push(Number(token));
-        expectValue = false;
-      } else if (token === "(") {
-        operators.push(token);
-        expectValue = true;
-      } else if (token === ")") {
-        while (operators.at(-1) && operators.at(-1) !== "(") apply();
-        if (operators.pop() !== "(") throw new Error("parenthesis");
-        expectValue = false;
-      } else {
+      if (/^\d/.test(token)) { values.push(Number(token)); expectValue = false; }
+      else if (token === "(") { operators.push(token); expectValue = true; }
+      else if (token === ")") { while (operators.at(-1) && operators.at(-1) !== "(") apply(); if (operators.pop() !== "(") throw new Error("parenthesis"); expectValue = false; }
+      else {
         if (expectValue && token === "-") values.push(0);
-        while (
-          operators.at(-1) &&
-          operators.at(-1) !== "(" &&
-          precedence[operators.at(-1)] >= precedence[token]
-        ) apply();
-        operators.push(token);
-        expectValue = true;
+        while (operators.at(-1) && operators.at(-1) !== "(" && precedence[operators.at(-1)] >= precedence[token]) apply();
+        operators.push(token); expectValue = true;
       }
     }
-    while (operators.length) {
-      if (operators.at(-1) === "(") throw new Error("parenthesis");
-      apply();
-    }
+    while (operators.length) { if (operators.at(-1) === "(") throw new Error("parenthesis"); apply(); }
     if (values.length !== 1 || !Number.isFinite(values[0])) return null;
     return `**Answer: ${Number.isInteger(values[0]) ? values[0] : Number(values[0].toFixed(10))}**`;
-  } catch {
-    return null;
-  }
+  } catch { return null; }
 }
 
 function localFallback(message: string, history: Array<{ role?: "user" | "assistant"; content?: string }>) {
   const arithmetic = calculateArithmetic(message);
   if (arithmetic) return arithmetic;
-
   const normalized = message.trim().toLowerCase().replace(/[?!.,]+$/g, "");
   const answers: Record<string, string> = {
     "what is the capital of india": "The capital of India is **New Delhi**.",
@@ -104,55 +92,30 @@ function localFallback(message: string, history: Array<{ role?: "user" | "assist
     "who is the founder of skillnests": "**Piyush Raj** is the Founder & CEO of SkillNests.",
     "who is the ceo of skillnests": "**Piyush Raj** is the Founder & CEO of SkillNests.",
     "what can i do on skillnests": "SkillNests brings together academic resources, career guidance, MUN and debate material, meetings, schedules, and student-focused learning tools.",
-    "who is the prime minister of india": "The **Prime Minister of India is Narendra Modi**. He has served as Prime Minister since 2014 and began his third consecutive term on 9 June 2024.",
-    "who is india's prime minister": "The **Prime Minister of India is Narendra Modi**. He has served as Prime Minister since 2014 and began his third consecutive term on 9 June 2024.",
+    "who is the prime minister of india": "The **Prime Minister of India is Narendra Modi**.",
+    "who is india's prime minister": "The **Prime Minister of India is Narendra Modi**.",
     "who is the pm of india": "The **Prime Minister of India is Narendra Modi**.",
     "who is pm of india": "The **Prime Minister of India is Narendra Modi**.",
     "india prime minister": "The **Prime Minister of India is Narendra Modi**.",
   };
   if (answers[normalized]) return answers[normalized];
-
-  if (/^(who is )?(the )?(current )?(prime minister|pm) (of )?india$/.test(normalized)) {
-    return "The **Prime Minister of India is Narendra Modi**.";
-  }
-
-  if (/newton.*second law|second law.*newton|force.*mass.*acceleration/.test(normalized)) {
-    return "Newton's second law states that the net force on an object equals its mass multiplied by its acceleration: **F = ma**. In simple terms, more force produces more acceleration, while more mass requires more force for the same acceleration.";
-  }
-
+  if (/^(who is )?(the )?(current )?(prime minister|pm) (of )?india$/.test(normalized)) return "The **Prime Minister of India is Narendra Modi**.";
+  if (/^(who is )?(the )?(current )?president (of )?india$/.test(normalized)) return "The **President of India is Droupadi Murmu**.";
+  if (/newton.*second law|second law.*newton|force.*mass.*acceleration/.test(normalized)) return "Newton's second law states that the net force on an object equals its mass multiplied by its acceleration: **F = ma**.";
+  if (/what is ioqm|ioqm full form|ioqm meaning/.test(normalized)) return "**IOQM** stands for **Indian Olympiad Qualifier in Mathematics**. It is part of India's mathematics Olympiad pathway. Current dates, eligibility and stages should be checked against the latest official sources.";
+  if (/nsejs|nsep|nsec|nseb|nsea/.test(normalized)) return "**NSEJS, NSEP, NSEC, NSEB and NSEA** are National Standard Examination terms used in India's science-competition ecosystem. I can explain their full forms, subjects, eligibility, stages and preparation; current rules should be verified from official sources.";
   if (/example|real[- ]life example|give me an example|show me an example/.test(normalized)) {
     const previous = [...history].reverse().find((item) => item.role === "user" && item.content)?.content?.toLowerCase() || "";
     const previousAssistant = [...history].reverse().find((item) => item.role === "assistant" && item.content)?.content || "";
-    if (/newton|force|acceleration|second law/.test(previous) || /newton|force|acceleration|f = ma/.test(previousAssistant.toLowerCase())) {
-      return "A simple example is pushing a shopping cart: pushing it harder gives it greater acceleration, while a heavier cart needs more force to get the same acceleration. That is **F = ma** in everyday life.";
-    }
+    if (/newton|force|acceleration|second law/.test(previous) || /newton|force|acceleration|f = ma/.test(previousAssistant.toLowerCase())) return "A simple example is pushing a shopping cart: pushing it harder gives it greater acceleration, while a heavier cart needs more force to get the same acceleration. That is **F = ma** in everyday life.";
     if (previousAssistant) return `Here is a practical example related to the previous answer: ${previousAssistant}`;
   }
-
   if (/explain.*easier|make.*easier|simpler|simple terms|explain that/.test(normalized)) {
     const previous = [...history].reverse().find((item) => item.role === "assistant" && item.content)?.content || "";
-    if (/newton|force|acceleration|f = ma/.test(previous.toLowerCase())) {
-      return "Think of it like this: push a light cart and it speeds up easily; push a heavy cart with the same force and it speeds up less. More force means more acceleration, and more mass means less acceleration for the same force.";
-    }
+    if (/newton|force|acceleration|f = ma/.test(previous.toLowerCase())) return "Think of it like this: push a light cart and it speeds up easily; push a heavy cart with the same force and it speeds up less. More force means more acceleration, and more mass means less acceleration for the same force.";
     if (previous) return `In simpler terms: ${previous}`;
   }
-
-  if (/how long|how much time|time.*here|been here/.test(normalized)) return "I can track your current SkillNests session time from the chat interface.";
-  if (/schedule|study plan|manage my time/.test(normalized)) {
-    return [
-      "Here’s a starter study schedule (assuming you’re free from 5:00 PM–10:00 PM):",
-      "",
-      "5:00–5:15 PM — Plan the session + review goals",
-      "5:15–6:15 PM — Physics: learn/revise one concept + examples",
-      "6:15–6:30 PM — Break",
-      "6:30–7:30 PM — Mathematics: focused problem practice",
-      "7:30–8:00 PM — Dinner / longer break",
-      "8:00–9:00 PM — Chemistry: concepts + practice questions",
-      "9:00–9:15 PM — Break",
-      "9:15–9:45 PM — Active recall + PYQs from today’s topics",
-      "9:45–10:00 PM — Review mistakes and plan tomorrow",
-    ].join("\n");
-  }
+  if (/schedule|study plan|manage my time/.test(normalized)) return ["Here’s a starter study schedule (assuming 5:00 PM–10:00 PM):","","5:00–5:15 PM — Plan the session + review goals","5:15–6:15 PM — Physics: concept + examples","6:15–6:30 PM — Break","6:30–7:30 PM — Mathematics: problem practice","7:30–8:00 PM — Dinner / longer break","8:00–9:00 PM — Chemistry: concepts + questions","9:00–9:15 PM — Break","9:15–9:45 PM — PYQs + active recall","9:45–10:00 PM — Review mistakes and plan tomorrow"].join("\n");
   if (/skillnests|website|what can i do/.test(normalized)) return "SkillNests is a student-focused learning platform with academic resources, PYQs, notes, MUN & debate material, career guidance, meetings, schedules, skill sharing, and SkillNests AI.";
   return null;
 }
@@ -162,107 +125,42 @@ export const Route = createFileRoute("/api/ai")({
     handlers: {
       POST: async ({ request }) => {
         try {
-          const body = (await request.json()) as {
-            message?: string;
-            sessionSeconds?: number;
-            history?: Array<{ role?: "user" | "assistant"; content?: string }>;
-          };
+          const body = (await request.json()) as { message?: string; sessionSeconds?: number; history?: Array<{ role?: "user" | "assistant"; content?: string }> };
           const message = body.message?.trim();
           if (!message) return Response.json({ error: "Message is required" }, { status: 400 });
-
-          const history = (body.history ?? [])
-            .filter((item) => (item.role === "user" || item.role === "assistant") && typeof item.content === "string")
-            .slice(-20);
-
-          // Always answer deterministic/common GK locally when possible. This
-          // guarantees basic facts remain available even if the AI gateway is down.
+          const history = (body.history ?? []).filter((item) => (item.role === "user" || item.role === "assistant") && typeof item.content === "string").slice(-20);
           const deterministic = localFallback(message, history);
-          if (deterministic && /prime minister|pm of india|capital of india|capital of australia|founder of skillnests|ceo of skillnests|newton.*second law|second law.*newton|^\s*(what is|calculate|solve|evaluate|compute)?\s*[0-9]/i.test(message)) {
-            return Response.json({ answer: deterministic, fallback: true, webUsed: false });
-          }
-
-          // On Vercel, AI Gateway can authenticate requests with the deployment's
-          // short-lived OIDC token. This removes the dependency on a manually
-          // configured OpenAI key in production while still allowing an explicit
-          // AI_GATEWAY_API_KEY or OPENAI_API_KEY for local/other deployments.
-          const gatewayToken =
-            process.env.AI_GATEWAY_API_KEY ||
-            process.env.OPENAI_API_KEY ||
-            request.headers.get("x-vercel-oidc-token");
-
+          if (deterministic && /prime minister|pm of india|president.*india|capital of india|capital of australia|founder of skillnests|ceo of skillnests|newton.*second law|second law.*newton|ioqm|nsejs|nsep|nsec|nseb|nsea|^\s*(what is|calculate|solve|evaluate|compute)?\s*[0-9]/i.test(message)) return Response.json({ answer: deterministic, fallback: true, webUsed: false });
+          const gatewayToken = process.env.AI_GATEWAY_API_KEY || process.env.OPENAI_API_KEY || request.headers.get("x-vercel-oidc-token");
           if (!gatewayToken) {
             if (deterministic) return Response.json({ answer: deterministic, fallback: true });
             return Response.json({ error: "AI service is not configured." }, { status: 503 });
           }
-
           const sessionSeconds = Math.max(0, Math.floor(body.sessionSeconds || 0));
           const input = [
-            ...history.map((item) => ({
-              role: item.role as "user" | "assistant",
-              content: [{ type: "input_text", text: item.content as string }],
-            })),
-            {
-              role: "user" as const,
-              content: [
-                {
-                  type: "input_text" as const,
-                  text: `${message}\n\nThe user's current SkillNests session duration is ${sessionSeconds} seconds. Use this only when relevant.`,
-                },
-              ],
-            },
+            ...history.map((item) => ({ role: item.role as "user" | "assistant", content: [{ type: "input_text", text: item.content as string }] })),
+            { role: "user" as const, content: [{ type: "input_text" as const, text: `${message}\n\nThe user's current SkillNests session duration is ${sessionSeconds} seconds. Use this only when relevant.` }] },
           ];
-
           const response = await fetch("https://ai-gateway.vercel.sh/v1/responses", {
             method: "POST",
-            headers: {
-              "content-type": "application/json",
-              authorization: `Bearer ${gatewayToken}`,
-            },
-            body: JSON.stringify({
-              model: process.env.OPENAI_MODEL || "openai/gpt-5.5",
-              instructions: SITE_CONTEXT,
-              input,
-              tools: shouldUseWebSearch(message) ? [{ type: "web_search" }] : undefined,
-              max_output_tokens: 1200,
-            }),
+            headers: { "content-type": "application/json", authorization: `Bearer ${gatewayToken}` },
+            body: JSON.stringify({ model: process.env.OPENAI_MODEL || "openai/gpt-5.5", instructions: SITE_CONTEXT, input, tools: shouldUseWebSearch(message) ? [{ type: "web_search" }] : undefined, max_output_tokens: 1400 }),
           });
-
           if (!response.ok) {
             const details = await response.text();
             console.error("AI Gateway request failed", response.status, details);
             if (deterministic) return Response.json({ answer: deterministic, fallback: true });
             return Response.json({ error: "The AI service returned an error. Please try again." }, { status: 502 });
           }
-
-          const data = (await response.json()) as {
-            output_text?: string;
-            output?: Array<{ type?: string; content?: Array<{ type?: string; text?: string }> }>;
-          };
-          const answer =
-            data.output_text?.trim() ||
-            data.output
-              ?.filter((item) => item.type === "message")
-              .flatMap((item) => item.content ?? [])
-              .filter((part) => part.type === "output_text" && part.text)
-              .map((part) => part.text)
-              .join("\n")
-              .trim();
-
+          const data = (await response.json()) as { output_text?: string; output?: Array<{ type?: string; content?: Array<{ type?: string; text?: string }> }> };
+          const answer = data.output_text?.trim() || data.output?.filter((item) => item.type === "message").flatMap((item) => item.content ?? []).filter((part) => part.type === "output_text" && part.text).map((part) => part.text).join("\n").trim();
           if (!answer) {
             if (deterministic) return Response.json({ answer: deterministic, fallback: true });
             return Response.json({ error: "The AI returned an empty response. Please try again." }, { status: 502 });
           }
-
           return Response.json({ answer, webUsed: shouldUseWebSearch(message) });
         } catch (error) {
           console.error("AI route error", error);
-          const fallback = (() => {
-            try {
-              return localFallback("", []);
-            } catch {
-              return null;
-            }
-          })();
           return Response.json({ error: "Unable to process the AI request." }, { status: 400 });
         }
       },
