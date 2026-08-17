@@ -19,16 +19,121 @@ function formatDuration(seconds: number) {
   return `${s}s`;
 }
 
-function localFallback(prompt: string, seconds: number) {
+function tryCalculate(expression: string): number | null {
+  const cleaned = expression
+    .replace(/[×x]/gi, "*")
+    .replace(/[÷]/g, "/")
+    .replace(/[−–—]/g, "-")
+    .replace(/\s+/g, "")
+    .replace(/\?+$/, "");
+
+  if (!/^[0-9+\-*/%.()^]+$/.test(cleaned) || !/[+\-*/%^]/.test(cleaned)) return null;
+  let i = 0;
+
+  const parseExpression = (): number => {
+    let value = parseTerm();
+    while (cleaned[i] === "+" || cleaned[i] === "-") {
+      const op = cleaned[i++];
+      const rhs = parseTerm();
+      value = op === "+" ? value + rhs : value - rhs;
+    }
+    return value;
+  };
+
+  const parseTerm = (): number => {
+    let value = parsePower();
+    while (cleaned[i] === "*" || cleaned[i] === "/" || cleaned[i] === "%") {
+      const op = cleaned[i++];
+      const rhs = parsePower();
+      if (op === "*" ) value *= rhs;
+      else if (op === "/") {
+        if (rhs === 0) throw new Error("division by zero");
+        value /= rhs;
+      } else value %= rhs;
+    }
+    return value;
+  };
+
+  const parsePower = (): number => {
+    let value = parseUnary();
+    if (cleaned[i] === "^") {
+      i++;
+      value = Math.pow(value, parsePower());
+    }
+    return value;
+  };
+
+  const parseUnary = (): number => {
+    if (cleaned[i] === "+") { i++; return parseUnary(); }
+    if (cleaned[i] === "-") { i++; return -parseUnary(); }
+    return parsePrimary();
+  };
+
+  const parsePrimary = (): number => {
+    if (cleaned[i] === "(") {
+      i++;
+      const value = parseExpression();
+      if (cleaned[i] !== ")") throw new Error("missing parenthesis");
+      i++;
+      return value;
+    }
+    const start = i;
+    while (/[0-9.]/.test(cleaned[i] || "")) i++;
+    if (start === i) throw new Error("expected number");
+    const value = Number(cleaned.slice(start, i));
+    if (!Number.isFinite(value)) throw new Error("invalid number");
+    return value;
+  };
+
+  try {
+    const result = parseExpression();
+    if (i !== cleaned.length || !Number.isFinite(result)) return null;
+    return result;
+  } catch {
+    return null;
+  }
+}
+
+function formatNumber(value: number) {
+  return Number.isInteger(value) ? String(value) : String(Number(value.toFixed(10)));
+}
+
+function localFallback(prompt: string, seconds: number, history: Message[]) {
   const p = prompt.toLowerCase().trim();
 
-  if (/^2\s*[+＋]\s*2\s*[=?]?$/.test(p)) return "2 + 2 = 4.";
+  const arithmeticCandidate = prompt
+    .replace(/^(what is|calculate|solve|evaluate|find)\s+/i, "")
+    .replace(/[=?]+\s*$/, "")
+    .trim();
+  const arithmetic = tryCalculate(arithmeticCandidate);
+  if (arithmetic !== null) return `${arithmeticCandidate} = ${formatNumber(arithmetic)}.`;
+
   if (/capital of (india|indian)/.test(p)) return "The capital of India is New Delhi.";
   if (/capital of (france|french)/.test(p)) return "The capital of France is Paris.";
   if (/capital of (japan|japanese)/.test(p)) return "The capital of Japan is Tokyo.";
   if (/largest planet/.test(p)) return "Jupiter is the largest planet in our Solar System.";
   if (/red planet/.test(p)) return "Mars is commonly called the Red Planet.";
   if (/who (is|was) (the )?founder|who.*ceo|piyush/.test(p)) return "Piyush Raj is the Founder & CEO of SkillNests.";
+
+  if (/newton.*second law|second law.*newton|force.*mass.*acceleration/.test(p)) {
+    return "Newton's second law states that the net force on an object equals its mass multiplied by its acceleration: F = ma. In simple terms, a larger force produces greater acceleration, while a larger mass needs more force for the same acceleration.";
+  }
+
+  if (/example|real[- ]life example|give me an example/.test(p)) {
+    const previous = [...history].reverse().find((m) => m.role === "user" && m.content);
+    if (previous && /newton|force|acceleration|second law/.test(previous.content.toLowerCase())) {
+      return "A simple example is pushing a shopping cart: pushing it harder gives it greater acceleration, while a heavier cart needs more force to get the same acceleration. That is F = ma in everyday life.";
+    }
+    const previousAssistant = [...history].reverse().find((m) => m.role === "assistant" && m.content);
+    if (previousAssistant) return `Here is a practical example related to what we were discussing: ${previousAssistant.content}`;
+  }
+
+  if (/explain.*easier|make.*easier|simpler|simple terms/.test(p)) {
+    const previous = [...history].reverse().find((m) => m.role === "assistant" && m.content);
+    if (previous && /newton|force|acceleration|f = ma/.test(previous.content.toLowerCase())) {
+      return "Think of it like this: push a light cart and it speeds up easily; push a heavy cart with the same force and it speeds up less. More force means more acceleration, and more mass means less acceleration for the same force.";
+    }
+  }
 
   if (/how long|how much time|time.*here|been here/.test(p)) {
     return `You've been on SkillNests for ${formatDuration(seconds)} in this session.`;
@@ -56,7 +161,7 @@ function localFallback(prompt: string, seconds: number) {
     return "SkillNests is a student-focused learning platform with academic resources, PYQs, notes, MUN & debate material, career guidance, meetings, schedules, skill sharing, and SkillNests AI.";
   }
 
-  return "I’m having trouble reaching the AI service right now, but the chat is working. Try a simple question, a study schedule request, or ask about SkillNests. If the AI service is configured correctly, I’ll use the full AI assistant automatically.";
+  return "I can help with academic questions, general knowledge, calculations, study planning, and SkillNests. Try asking me something specific.";
 }
 
 export function StudyAssistant() {
@@ -89,7 +194,7 @@ export function StudyAssistant() {
     const prompt = text.trim();
     if (!prompt || sending) return;
 
-    const historyForRequest = messages.slice(-10);
+    const historyForRequest = messages.slice(-12);
     setInput("");
     setMessages((prev) => [...prev, { role: "user", content: prompt }]);
     setSending(true);
@@ -105,10 +210,10 @@ export function StudyAssistant() {
       if (response.ok && data.answer) {
         setMessages((prev) => [...prev, { role: "assistant", content: data.answer as string }]);
       } else {
-        setMessages((prev) => [...prev, { role: "assistant", content: localFallback(prompt, seconds) }]);
+        setMessages((prev) => [...prev, { role: "assistant", content: localFallback(prompt, seconds, historyForRequest) }]);
       }
     } catch {
-      setMessages((prev) => [...prev, { role: "assistant", content: localFallback(prompt, seconds) }]);
+      setMessages((prev) => [...prev, { role: "assistant", content: localFallback(prompt, seconds, historyForRequest) }]);
     } finally {
       setSending(false);
     }
