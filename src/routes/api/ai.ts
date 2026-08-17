@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createAPIFileRoute } from "@tanstack/react-start/api";
 
 const SITE_CONTEXT = `You are SkillNests AI, a capable general-purpose AI assistant built into SkillNests.in.
 
@@ -85,90 +85,58 @@ function localFallback(message: string, history: Array<{ role?: "user" | "assist
   return null;
 }
 
-export const Route = createFileRoute("/api/ai")({
-  server: {
-    handlers: {
-      POST: async ({ request }) => {
-        const started = Date.now();
-        try {
-          const body = (await request.json()) as { message?: string; sessionSeconds?: number; history?: Array<{ role?: "user" | "assistant"; content?: string }> };
-          const message = body.message?.trim();
-          if (!message) return Response.json({ error: "Message is required" }, { status: 400 });
-          const history = (body.history ?? []).filter((item) => (item.role === "user" || item.role === "assistant") && typeof item.content === "string").slice(-12);
-          const deterministic = localFallback(message, history);
-          if (deterministic) return Response.json({ answer: deterministic, fallback: true });
+export const APIRoute = createAPIFileRoute("/api/ai")({
+  POST: async ({ request }) => {
+    const started = Date.now();
+    try {
+      const body = (await request.json()) as { message?: string; sessionSeconds?: number; history?: Array<{ role?: "user" | "assistant"; content?: string }> };
+      const message = body.message?.trim();
+      if (!message) return Response.json({ error: "Message is required" }, { status: 400 });
+      const history = (body.history ?? []).filter((item) => (item.role === "user" || item.role === "assistant") && typeof item.content === "string").slice(-12);
+      const deterministic = localFallback(message, history);
+      if (deterministic) return Response.json({ answer: deterministic, fallback: true });
 
-          const sessionSeconds = Math.max(0, Math.floor(body.sessionSeconds || 0));
-          const messages = [
-            { role: "system", content: SITE_CONTEXT },
-            ...history.map((item) => ({ role: item.role as "user" | "assistant", content: item.content as string })),
-            { role: "user" as const, content: `${message}\n\nCurrent SkillNests session duration: ${sessionSeconds} seconds.` },
-          ];
+      const sessionSeconds = Math.max(0, Math.floor(body.sessionSeconds || 0));
+      const messages = [
+        { role: "system", content: SITE_CONTEXT },
+        ...history.map((item) => ({ role: item.role as "user" | "assistant", content: item.content as string })),
+        { role: "user" as const, content: `${message}\n\nCurrent SkillNests session duration: ${sessionSeconds} seconds.` },
+      ];
 
-          const gatewayKey = process.env.AI_GATEWAY_API_KEY;
-          const openAIKey = process.env.OPENAI_API_KEY;
-          const useGateway = Boolean(gatewayKey);
-          const apiKey = gatewayKey || openAIKey;
-          const endpoint = useGateway
-            ? "https://ai-gateway.vercel.sh/v1/chat/completions"
-            : "https://api.openai.com/v1/chat/completions";
+      const gatewayKey = process.env.AI_GATEWAY_API_KEY;
+      const openAIKey = process.env.OPENAI_API_KEY;
+      const useGateway = Boolean(gatewayKey);
+      const apiKey = gatewayKey || openAIKey;
+      const endpoint = useGateway ? "https://ai-gateway.vercel.sh/v1/chat/completions" : "https://api.openai.com/v1/chat/completions";
+      if (!apiKey) return Response.json({ error: "AI service is not configured on this deployment." }, { status: 503 });
 
-          if (!apiKey) {
-            return Response.json({ error: "AI service is not configured on this deployment." }, { status: 503 });
-          }
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 15000);
+      let response: Response;
+      try {
+        response = await fetch(endpoint, {
+          method: "POST",
+          headers: { "content-type": "application/json", authorization: `Bearer ${apiKey}` },
+          body: JSON.stringify({ model: process.env.OPENAI_MODEL || "gpt-5.5", messages, max_tokens: 1200 }),
+          signal: controller.signal,
+        });
+      } finally { clearTimeout(timeout); }
 
-          const controller = new AbortController();
-          const timeout = setTimeout(() => controller.abort(), 15000);
-          let response: Response;
-          try {
-            response = await fetch(endpoint, {
-              method: "POST",
-              headers: { "content-type": "application/json", authorization: `Bearer ${apiKey}` },
-              body: JSON.stringify({
-                model: process.env.OPENAI_MODEL || "gpt-5.5",
-                messages,
-                max_tokens: 1200,
-              }),
-              signal: controller.signal,
-            });
-          } finally {
-            clearTimeout(timeout);
-          }
+      const raw = await response.text();
+      if (!response.ok) {
+        console.error("AI provider failed", { provider: useGateway ? "vercel-ai-gateway" : "openai", status: response.status, body: raw.slice(0, 500), elapsedMs: Date.now() - started });
+        return Response.json({ error: response.status === 401 ? "AI authentication failed. Check the configured API key." : response.status === 429 ? "The AI service is rate-limited or out of quota." : "The AI service returned an error. Please try again." }, { status: response.status === 429 ? 503 : response.status === 401 ? 503 : 502 });
+      }
 
-          const raw = await response.text();
-          if (!response.ok) {
-            console.error("AI provider failed", {
-              provider: useGateway ? "vercel-ai-gateway" : "openai",
-              status: response.status,
-              body: raw.slice(0, 500),
-              elapsedMs: Date.now() - started,
-            });
-            return Response.json({
-              error: response.status === 401
-                ? "AI authentication failed. Check the configured API key."
-                : response.status === 429
-                  ? "The AI service is rate-limited or out of quota."
-                  : "The AI service returned an error. Please try again.",
-            }, { status: response.status === 429 ? 503 : response.status === 401 ? 503 : 502 });
-          }
-
-          let data: { choices?: Array<{ message?: { content?: string } }> };
-          try {
-            data = JSON.parse(raw);
-          } catch {
-            return Response.json({ error: "The AI service returned an invalid response." }, { status: 502 });
-          }
-          const answer = data.choices?.[0]?.message?.content?.trim();
-          if (!answer) return Response.json({ error: "The AI returned an empty response." }, { status: 502 });
-          return Response.json({ answer });
-        } catch (error) {
-          console.error("AI route error", error);
-          if (error instanceof DOMException && error.name === "AbortError") {
-            return Response.json({ error: "The AI request timed out. Please try again." }, { status: 504 });
-          }
-          return Response.json({ error: "Unable to process the AI request." }, { status: 500 });
-        }
-      },
-    },
+      let data: { choices?: Array<{ message?: { content?: string } }> };
+      try { data = JSON.parse(raw); } catch { return Response.json({ error: "The AI service returned an invalid response." }, { status: 502 }); }
+      const answer = data.choices?.[0]?.message?.content?.trim();
+      if (!answer) return Response.json({ error: "The AI returned an empty response." }, { status: 502 });
+      return Response.json({ answer });
+    } catch (error) {
+      console.error("AI route error", error);
+      if (error instanceof DOMException && error.name === "AbortError") return Response.json({ error: "The AI request timed out. Please try again." }, { status: 504 });
+      return Response.json({ error: "Unable to process the AI request." }, { status: 500 });
+    }
   },
 });
