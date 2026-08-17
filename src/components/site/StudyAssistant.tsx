@@ -7,7 +7,7 @@ const QUICK_PROMPTS = [
   "What can I do on SkillNests?",
   "Who is the CEO of SkillNests?",
   "Make me a study schedule",
-  "How long have I been here?",
+  "Ask me a GK question",
 ];
 
 function formatDuration(seconds: number) {
@@ -19,23 +19,6 @@ function formatDuration(seconds: number) {
   return `${s}s`;
 }
 
-function localAnswer(prompt: string, seconds: number) {
-  const p = prompt.toLowerCase();
-  if (p.includes("ceo") || p.includes("founder") || p.includes("piyush")) {
-    return "Piyush Raj is the Founder & CEO of SkillNests.";
-  }
-  if (p.includes("how long") || p.includes("time") || p.includes("here")) {
-    return `You've been on SkillNests for ${formatDuration(seconds)} in this session. Keep an eye on the clock and take short breaks between study blocks.`;
-  }
-  if (p.includes("schedule") || p.includes("study plan") || p.includes("manage my time")) {
-    return "I can build a personalised study plan. Tell me your subjects, available hours, school/coaching timings, and any upcoming exam dates. I’ll balance focused study blocks, revision, practice, and breaks.";
-  }
-  if (p.includes("skillnests") || p.includes("website") || p.includes("what can")) {
-    return "SkillNests is a student-focused learning platform built around practical learning, collaboration, resources, career guidance and MUN material. Ask me about a feature, or tell me what you need to study and I can help you plan your time.";
-  }
-  return "I’m SkillNests AI. I can answer general questions, explain SkillNests, help with academic planning, build study schedules, and track your time on the website.";
-}
-
 export function StudyAssistant() {
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
@@ -45,7 +28,7 @@ export function StudyAssistant() {
     {
       role: "assistant",
       content:
-        "Hi — I’m SkillNests AI. Ask me anything, ask about SkillNests, plan your studies, or check your time on the website.",
+        "Hi — I’m SkillNests AI. Ask me a question, give me a study task, or ask about SkillNests. I can use the conversation context instead of treating every message as a new chat.",
     },
   ]);
 
@@ -67,25 +50,41 @@ export function StudyAssistant() {
   async function sendMessage(text = input) {
     const prompt = text.trim();
     if (!prompt || sending) return;
+
+    const historyForRequest = messages.slice(-10);
     setInput("");
     setMessages((prev) => [...prev, { role: "user", content: prompt }]);
     setSending(true);
+
     try {
       const response = await fetch("/api/ai", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ message: prompt, sessionSeconds: seconds }),
+        body: JSON.stringify({
+          message: prompt,
+          sessionSeconds: seconds,
+          history: historyForRequest,
+        }),
       });
-      if (!response.ok) throw new Error("AI unavailable");
-      const data = (await response.json()) as { answer?: string };
+
+      const data = (await response.json().catch(() => ({}))) as {
+        answer?: string;
+        error?: string;
+      };
+
+      if (!response.ok || !data.answer) {
+        throw new Error(data.error || "AI service is temporarily unavailable.");
+      }
+
+      setMessages((prev) => [...prev, { role: "assistant", content: data.answer as string }]);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "AI service is temporarily unavailable.";
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", content: data.answer || localAnswer(prompt, seconds) },
-      ]);
-    } catch {
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: localAnswer(prompt, seconds) },
+        {
+          role: "assistant",
+          content: `${message}\n\nPlease try again in a moment. If this persists in production, check that the OPENAI_API_KEY environment variable is configured on the server.`,
+        },
       ]);
     } finally {
       setSending(false);
@@ -130,7 +129,7 @@ export function StudyAssistant() {
                 className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
               >
                 <div
-                  className={`max-w-[88%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
+                  className={`max-w-[88%] whitespace-pre-wrap rounded-2xl px-4 py-3 text-sm leading-relaxed ${
                     message.role === "user"
                       ? "bg-rose-gold text-white"
                       : "bg-muted/70 text-foreground"
@@ -153,7 +152,8 @@ export function StudyAssistant() {
                 <button
                   key={prompt}
                   onClick={() => void sendMessage(prompt)}
-                  className="shrink-0 rounded-full border border-border px-3 py-1.5 text-[11px] transition hover:border-cyan-400/60 hover:text-cyan-400"
+                  disabled={sending}
+                  className="shrink-0 rounded-full border border-border px-3 py-1.5 text-[11px] transition hover:border-cyan-400/60 hover:text-cyan-400 disabled:opacity-50"
                 >
                   {prompt}
                 </button>
