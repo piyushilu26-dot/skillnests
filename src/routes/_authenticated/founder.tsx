@@ -13,6 +13,7 @@ import sanviPhoto from "@/assets/sanvi.jpeg";
 import miskaPhoto from "@/assets/miska rai.jpeg";
 import aravPhoto from "@/assets/aravPhoto.jpg";
 import anantPhoto from "@/assets/anant.jpeg";
+import anamPhoto from "@/assets/anam.jpeg";
 
 export const Route = createFileRoute("/_authenticated/founder")({
   ssr: false,
@@ -61,6 +62,7 @@ function FounderPage() {
 
             const coreMembers = [
               { name: "Arav Raj", photo: aravPhoto, bio: "Building initiatives that create opportunities and positive impact for students and society. Join us at SkillNests.", email: "aravrajraj842@gmail.com" },
+              { name: "Anam Zia", photo: anamPhoto, bio: "Finally it's time that we take a step towards skillnests.in.", email: "" },
             ];
 
             const PersonCard = ({ f, role, featured = false }: { f: any; role: string; featured?: boolean }) => (
@@ -82,10 +84,10 @@ function FounderPage() {
                     <h2 className={`${featured ? "text-3xl sm:text-4xl" : "text-2xl"} font-serif tracking-tight`}>{f.name}</h2>
                     <div className="w-10 h-px bg-rose-gold/40 my-4 mx-auto sm:mx-0" />
                     <p className="text-sm text-muted-foreground leading-7 max-w-xl">{f.bio}</p>
-                    <div className="mt-5 inline-flex items-center gap-2 text-xs text-rose-gold/90">
+                    {f.email && <div className="mt-5 inline-flex items-center gap-2 text-xs text-rose-gold/90">
                       <Mail className="w-3.5 h-3.5 flex-shrink-0" />
                       <a href={`mailto:${f.email}`} className="hover:underline break-all">{f.email}</a>
-                    </div>
+                    </div>}
                   </div>
                 </div>
               </motion.article>
@@ -116,7 +118,7 @@ function FounderPage() {
                     </div>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    {coreMembers.map((f) => <PersonCard key={f.email} f={f} role="Core Member" />)}
+                    {coreMembers.map((f) => <PersonCard key={f.name} f={f} role="Core Member" />)}
                   </div>
                 </section>
               </>
