@@ -7,6 +7,7 @@ import { userProgressStore, grantXP } from "@/stores";
 import { uid } from "@/lib/local-store";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
+import { LearningIntelligencePanel } from "@/components/learning/LearningIntelligencePanel";
 
 export const Route = createFileRoute("/_authenticated/progress")({
   ssr: false,
@@ -143,6 +144,8 @@ function ProgressPage() {
             )}
           </div>
         </motion.div>
+
+        <LearningIntelligencePanel />
       </div>
 
       {/* Goal Modal */}
