@@ -10,13 +10,10 @@ service cloud.firestore {
 
     match /users/{uid} {
       allow read: if signedIn() && (request.auth.uid == uid || isAdmin());
-      // Create: role must match email. paid must be false unless email is in free/admin list.
       allow create: if signedIn() && request.auth.uid == uid
         && request.resource.data.role == (request.auth.token.email == 'founders@skillnests.in' ? 'admin' : 'student')
-        && (request.resource.data.paid == false || 
+        && (request.resource.data.paid == false ||
             (request.resource.data.paid == true && request.auth.token.email in ['founders@skillnests.in', 'adilsukumar24@gmail.com', 'snehaldixit237@gmail.com']));
-
-      // Update: Admin can do anything. Users can update themselves but cannot change paid/paidUntil or role.
       allow update: if isAdmin() || (
         signedIn() && request.auth.uid == uid
         && (!('role' in request.resource.data.diff(resource.data).affectedKeys())
@@ -24,52 +21,31 @@ service cloud.firestore {
         && (!('paid' in request.resource.data.diff(resource.data).affectedKeys()))
         && (!('paidUntil' in request.resource.data.diff(resource.data).affectedKeys()))
       );
-
-      // Delete: Admin can delete user documents.
       allow delete: if isAdmin();
     }
 
-    // Group chat: any signed-in user can read & post; admin can delete.
     match /sn-chat-group/{id} {
       allow read: if signedIn();
       allow create: if signedIn() && request.resource.data.senderEmail == request.auth.token.email;
       allow delete: if isAdmin();
     }
-
-    // Direct messages between user and admin.
     match /sn-chat-dm/{id} {
-      allow read: if signedIn() &&
-        (resource.data.from == request.auth.token.email ||
-         resource.data.to == request.auth.token.email || isAdmin());
+      allow read: if signedIn() && (resource.data.from == request.auth.token.email || resource.data.to == request.auth.token.email || isAdmin());
       allow create: if signedIn() && request.resource.data.from == request.auth.token.email;
       allow delete: if isAdmin();
     }
-
-    // Founder inbox: any signed-in user creates; only admin reads.
     match /sn-founder-inbox/{id} {
       allow create: if signedIn() && request.resource.data.from == request.auth.token.email;
       allow read, update, delete: if isAdmin();
     }
-
-    // Schedule is per-user.
-    match /sn-schedule/{id} {
-      allow read, write: if signedIn();
-    }
-
-    // Public catalogs: anyone signed in reads; only admin writes.
+    match /sn-schedule/{id} { allow read, write: if signedIn(); }
     match /sn-pyq/{id}        { allow read: if signedIn(); allow write: if isAdmin(); }
     match /sn-notes/{id}      { allow read: if signedIn(); allow write: if isAdmin(); }
-    // Meetings: anyone signed in reads. Admin can write any. Signed-in users can
-    // create peer study rooms (kind == 'peer') hosted by themselves, and delete their own.
     match /sn-meetings/{id} {
       allow read: if signedIn();
-      allow create: if isAdmin() ||
-        (signedIn() && request.resource.data.kind == 'peer'
-          && request.resource.data.hostEmail == request.auth.token.email);
+      allow create: if isAdmin() || (signedIn() && request.resource.data.kind == 'peer' && request.resource.data.hostEmail == request.auth.token.email);
       allow update: if isAdmin();
-      allow delete: if isAdmin() ||
-        (signedIn() && resource.data.kind == 'peer'
-          && resource.data.hostEmail == request.auth.token.email);
+      allow delete: if isAdmin() || (signedIn() && resource.data.kind == 'peer' && resource.data.hostEmail == request.auth.token.email);
     }
     match /sn-coding/{id}     { allow read: if signedIn(); allow write: if isAdmin(); }
     match /sn-career-live/{id}{ allow read: if signedIn(); allow write: if isAdmin(); }
@@ -77,46 +53,37 @@ service cloud.firestore {
     match /sn-mun/{id}        { allow read: if signedIn(); allow write: if isAdmin(); }
     match /sn-olympiads/{id}  { allow read: if signedIn(); allow write: if isAdmin(); }
     match /sn-notices/{id}    { allow read: if signedIn(); allow write: if isAdmin(); }
-
-    // Skill share: any signed-in user reads & creates; author edits/deletes own.
     match /sn-skill/{id} {
       allow read: if signedIn();
       allow create: if signedIn() && request.resource.data.authorEmail == request.auth.token.email;
-      allow update, delete: if signedIn() &&
-        (resource.data.authorEmail == request.auth.token.email || isAdmin());
+      allow update, delete: if signedIn() && (resource.data.authorEmail == request.auth.token.email || isAdmin());
     }
-
     match /sn-mun-debates/{id} {
       allow read: if signedIn();
       allow create: if signedIn() && request.resource.data.authorEmail == request.auth.token.email;
-      allow update, delete: if signedIn() &&
-        (resource.data.authorEmail == request.auth.token.email || isAdmin());
+      allow update, delete: if signedIn() && (resource.data.authorEmail == request.auth.token.email || isAdmin());
     }
-
     match /sn-mun-comments/{id} {
       allow read: if signedIn();
       allow create: if signedIn() && request.resource.data.authorEmail == request.auth.token.email && (isAdmin() || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.paid == true);
-      allow update, delete: if signedIn() &&
-        (resource.data.authorEmail == request.auth.token.email || isAdmin());
+      allow update, delete: if signedIn() && (resource.data.authorEmail == request.auth.token.email || isAdmin());
     }
+    match /sn-extra-config/{id} { allow read: if signedIn(); allow write: if isAdmin(); }
+    match /sn-extra-content/{id} { allow read: if signedIn(); allow write: if isAdmin(); }
+    match /sn-progress/{id} { allow read, write: if signedIn(); }
+    match /sn-gamification/{id} { allow read: if signedIn(); allow write: if signedIn() && request.auth.uid == id; }
 
-    match /sn-extra-config/{id} {
+    // Learning intelligence: students own their events and profiles. Events are append-only.
+    match /sn-learning-events/{id} {
+      allow read: if signedIn() && resource.data.userId == request.auth.uid;
+      allow create: if signedIn() && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if false;
+    }
+    match /sn-learning-profiles/{id} {
       allow read: if signedIn();
-      allow write: if isAdmin();
-    }
-
-    match /sn-extra-content/{id} {
-      allow read: if signedIn();
-      allow write: if isAdmin();
-    }
-
-    match /sn-progress/{id} {
-      allow read, write: if signedIn();
-    }
-
-    match /sn-gamification/{id} {
-      allow read: if signedIn();
-      allow write: if signedIn() && request.auth.uid == id;
+      allow create: if signedIn() && request.resource.data.userId == request.auth.uid;
+      allow update: if signedIn() && resource.data.userId == request.auth.uid && request.resource.data.userId == request.auth.uid;
+      allow delete: if signedIn() && resource.data.userId == request.auth.uid;
     }
   }
 }

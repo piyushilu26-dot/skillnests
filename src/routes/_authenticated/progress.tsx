@@ -1,205 +1,90 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { Navbar } from "@/components/site/Navbar";
 import { useAuth } from "@/lib/auth";
-import { useState } from "react";
-import { CheckCircle2, Circle, Plus, Trash2, TrendingUp, Trophy, Clock, X } from "lucide-react";
-import { userProgressStore, grantXP } from "@/stores";
+import { useMemo, useState } from "react";
+import { CheckCircle2, Circle, Plus, Trash2, TrendingUp, Trophy, Clock, X, Brain, Users, Target, BarChart3, Sparkles, ArrowRight, RotateCcw } from "lucide-react";
+import { userProgressStore, grantXP, notesStore, pyqStore, skillStore } from "@/stores";
 import { uid } from "@/lib/local-store";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
+import { analytics, peerMatches, recommendedResources, selectAdaptiveQuestions, type Difficulty } from "@/lib/learning-engine";
+import { learningEventsStore, learningProfilesStore, recordLearningEvent, saveLearningProfile } from "@/lib/learning-store";
 
-export const Route = createFileRoute("/_authenticated/progress")({
-  ssr: false,
-  component: ProgressPage,
-});
+export const Route = createFileRoute("/_authenticated/progress")({ ssr: false, component: ProgressPage });
+type Tab = "overview" | "quiz" | "resources" | "peers";
 
 function ProgressPage() {
   const { user } = useAuth();
   const goals = userProgressStore.use();
-  
+  const events = learningEventsStore.use();
+  const profiles = learningProfilesStore.use();
+  const notes = notesStore.use();
+  const papers = pyqStore.use();
+  const skills = skillStore.use();
+  const [tab, setTab] = useState<Tab>("overview");
   const [draftGoal, setDraftGoal] = useState("");
   const [draftTime, setDraftTime] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
-  
-  // Calculate todayStr synchronously
-  const d = new Date();
-  const todayStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-
+  const [subjectFilter, setSubjectFilter] = useState<string | undefined>(undefined);
+  const today = new Date();
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
   const todayGoals = goals.filter(g => g.date === todayStr);
   const completedToday = todayGoals.filter(g => g.completed).length;
-  
-  // Calculate a mock "streak" by grouping past completed goals
-  const uniqueDatesCompleted = new Set(goals.filter(g => g.completed).map(g => g.date)).size;
+  const stats = useMemo(() => analytics(events), [events]);
+  const myProfile = profiles.find(p => p.userId === user?.uid) ?? null;
+  const matches = useMemo(() => peerMatches(myProfile, profiles), [myProfile, profiles]);
+  const resources = useMemo(() => recommendedResources(notes, papers, skills, events), [notes, papers, skills, events]);
 
   function addGoal(e: React.FormEvent) {
     e.preventDefault();
     if (!draftGoal.trim() || !user) return;
-    
-    userProgressStore.update(p => [{
-      id: uid(),
-      userId: user.uid,
-      date: todayStr,
-      task: draftGoal.trim(),
-      timeLimit: draftTime.trim() || undefined,
-      completed: false,
-      createdAt: new Date().toISOString()
-    }, ...p]);
-    setDraftGoal("");
-    setDraftTime("");
-    setIsModalOpen(false);
-    
-    grantXP(user, 5);
-    toast.success("Goal added! +5 XP 🚀");
+    const task = draftGoal.trim();
+    userProgressStore.update(p => [{ id: uid(), userId: user.uid, date: todayStr, task, timeLimit: draftTime.trim() || undefined, completed: false, createdAt: new Date().toISOString() }, ...p]);
+    setDraftGoal(""); setDraftTime(""); setIsModalOpen(false);
+    grantXP(user, 5); recordLearningEvent({ type: "goal", itemId: task, score: 0 }); toast.success("Goal added! +5 XP");
   }
-
   function toggleGoal(id: string, currentlyCompleted: boolean) {
     userProgressStore.update(p => p.map(g => g.id === id ? { ...g, completed: !currentlyCompleted } : g));
-    if (!currentlyCompleted && user) {
-      grantXP(user, 10);
-      toast.success("Goal completed! +10 XP 🎉");
-    }
+    if (!currentlyCompleted && user) { grantXP(user, 10); recordLearningEvent({ type: "goal", itemId: id, score: 1 }); toast.success("Goal completed! +10 XP"); }
   }
+  function deleteGoal(id: string) { userProgressStore.update(p => p.filter(g => g.id !== id)); }
 
-  function deleteGoal(id: string) {
-    userProgressStore.update(p => p.filter(g => g.id !== id));
-  }
-
-  return (
-    <main className="min-h-screen">
-      <Navbar />
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 pt-28 pb-16">
-        <div className="mb-8">
-          <p className="text-xs font-mono uppercase tracking-widest text-rose-gold">my progress</p>
-          <h1 className="font-serif text-4xl mt-1">Consistency is everything.</h1>
-        </div>
-
-        <div className="grid sm:grid-cols-2 gap-6 mb-10">
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="glass-strong rounded-3xl p-6 flex items-center gap-5">
-            <div className="w-14 h-14 rounded-full bg-rose-gold/10 flex items-center justify-center text-rose-gold">
-              <TrendingUp className="w-6 h-6" />
-            </div>
-            <div>
-              <div className="text-sm font-mono uppercase tracking-widest text-muted-foreground mb-1">Today</div>
-              <div className="font-serif text-3xl">
-                {completedToday} <span className="text-lg text-muted-foreground">/ {todayGoals.length} tasks</span>
-              </div>
-            </div>
-          </motion.div>
-          
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="glass-strong rounded-3xl p-6 flex items-center gap-5">
-            <div className="w-14 h-14 rounded-full bg-rose-gold/10 flex items-center justify-center text-rose-gold">
-              <Trophy className="w-6 h-6" />
-            </div>
-            <div>
-              <div className="text-sm font-mono uppercase tracking-widest text-muted-foreground mb-1">Active Days</div>
-              <div className="font-serif text-3xl">
-                {uniqueDatesCompleted} <span className="text-lg text-muted-foreground">days</span>
-              </div>
-            </div>
-          </motion.div>
-        </div>
-
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="font-serif text-2xl">Daily Study Checklist</h2>
-            <button 
-              onClick={() => setIsModalOpen(true)}
-              className="btn-phoenix rounded-full px-5 py-2.5 text-sm flex items-center gap-2"
-            >
-              <Plus className="w-4 h-4" /> Add Goal
-            </button>
-          </div>
-
-          <div className="space-y-3">
-            {todayGoals.length === 0 ? (
-              <div className="text-center py-10 text-sm text-muted-foreground italic glass rounded-3xl">
-                No goals set for today yet. Start small!
-              </div>
-            ) : (
-              todayGoals.sort((a,b) => b.createdAt.localeCompare(a.createdAt)).map(g => (
-                <div key={g.id} className="glass rounded-2xl p-4 flex items-center gap-4 group">
-                  <button 
-                    onClick={() => toggleGoal(g.id, g.completed)}
-                    className={`transition-colors shrink-0 ${g.completed ? 'text-rose-gold' : 'text-muted-foreground hover:text-rose-gold/70'}`}
-                  >
-                    {g.completed ? <CheckCircle2 className="w-6 h-6" /> : <Circle className="w-6 h-6" />}
-                  </button>
-                  <div className={`flex-1 text-sm transition-all ${g.completed ? 'text-muted-foreground line-through' : 'text-foreground/90'}`}>
-                    <div>{g.task}</div>
-                    {g.timeLimit && (
-                      <div className="inline-flex items-center gap-1 mt-1 text-[11px] font-mono uppercase tracking-widest text-rose-gold bg-rose-gold/10 px-2 py-0.5 rounded-full">
-                        <Clock className="w-3 h-3" /> {g.timeLimit}
-                      </div>
-                    )}
-                  </div>
-                  <button 
-                    onClick={() => deleteGoal(g.id)}
-                    className="opacity-0 group-hover:opacity-100 p-2 text-muted-foreground hover:text-crimson transition shrink-0"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              ))
-            )}
-          </div>
-        </motion.div>
-      </div>
-
-      {/* Goal Modal */}
-      <AnimatePresence>
-        {isModalOpen && (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm"
-          >
-            <motion.div 
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="glass-strong rounded-3xl w-full max-w-md p-6 relative overflow-hidden"
-            >
-              <button 
-                onClick={() => setIsModalOpen(false)}
-                className="absolute top-4 right-4 p-2 text-muted-foreground hover:text-foreground transition rounded-full hover:bg-white/5"
-              >
-                <X className="w-5 h-5" />
-              </button>
-              
-              <h3 className="font-serif text-2xl mb-2 text-gradient-gold">Set a New Goal</h3>
-              <p className="text-sm text-muted-foreground mb-6">What do you want to accomplish today?</p>
-              
-              <form onSubmit={addGoal} className="space-y-4">
-                <div>
-                  <label className="block text-xs font-mono uppercase tracking-widest text-muted-foreground mb-2 ml-1">Task Description</label>
-                  <input 
-                    value={draftGoal}
-                    onChange={e => setDraftGoal(e.target.value)}
-                    placeholder="e.g., Complete Math Chapter 4"
-                    className="w-full glass rounded-xl px-4 py-3 text-sm bg-transparent outline-none focus:border-rose-gold/40 transition"
-                    autoFocus
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-mono uppercase tracking-widest text-muted-foreground mb-2 ml-1">Time Limit <span className="opacity-50">(Optional)</span></label>
-                  <input 
-                    value={draftTime}
-                    onChange={e => setDraftTime(e.target.value)}
-                    placeholder="e.g., 30 mins, 2 hours"
-                    className="w-full glass rounded-xl px-4 py-3 text-sm bg-transparent outline-none focus:border-rose-gold/40 transition"
-                  />
-                </div>
-                <div className="pt-2">
-                  <button type="submit" disabled={!draftGoal.trim()} className="w-full btn-phoenix rounded-xl py-3 text-sm flex items-center justify-center gap-2 disabled:opacity-50 transition">
-                    <Plus className="w-4 h-4" /> Save Goal
-                  </button>
-                </div>
-              </form>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </main>
-  );
+  return <main className="min-h-screen"><Navbar /><div className="max-w-6xl mx-auto px-4 sm:px-6 pt-28 pb-20">
+    <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-5 mb-8"><div><p className="text-xs font-mono uppercase tracking-widest text-rose-gold">intelligent learning dashboard</p><h1 className="font-serif text-4xl sm:text-5xl mt-1">Learn around <span className="text-gradient-gold">you.</span></h1><p className="text-sm text-muted-foreground mt-3 max-w-2xl">SkillNests learns from your practice history to select questions, surface resources, measure progress, and suggest peers with overlapping goals.</p></div><Link to="/pyq" className="btn-ghost-gold rounded-full px-5 py-2.5 text-sm inline-flex items-center gap-2 w-fit">Browse PYQs <ArrowRight className="w-4 h-4" /></Link></div>
+    <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-7"><Metric icon={BarChart3} label="Accuracy" value={`${Math.round(stats.accuracy * 100)}%`} /><Metric icon={Brain} label="Questions" value={String(stats.questions)} /><Metric icon={Target} label="Active days" value={String(stats.activeDays)} /><Metric icon={Clock} label="Study time" value={formatDuration(stats.totalDuration)} /><Metric icon={Trophy} label="Today's goals" value={`${completedToday}/${todayGoals.length}`} /></div>
+    <div className="flex flex-wrap gap-2 mb-8">{(["overview", "quiz", "resources", "peers"] as Tab[]).map(t => <button key={t} onClick={() => setTab(t)} className={`px-4 py-2 rounded-full text-xs font-mono uppercase tracking-widest transition ${tab === t ? "btn-phoenix" : "glass text-muted-foreground hover:text-foreground"}`}>{t === "quiz" ? "Adaptive quiz" : t === "peers" ? "Peer matching" : t}</button>)}</div>
+    {tab === "overview" && <Overview stats={stats} goals={todayGoals} onToggle={toggleGoal} onDelete={deleteGoal} onAdd={() => setIsModalOpen(true)} resources={resources.slice(0, 3)} />}
+    {tab === "quiz" && <AdaptiveQuiz events={events} subject={subjectFilter} setSubject={setSubjectFilter} />}
+    {tab === "resources" && <ResourcePanel resources={resources} />}
+    {tab === "peers" && <PeerPanel profile={myProfile} matches={matches} />}
+  </div>
+  <AnimatePresence>{isModalOpen && <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm"><motion.div initial={{ scale: .95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: .95, opacity: 0 }} className="glass-strong rounded-3xl w-full max-w-md p-6 relative"><button onClick={() => setIsModalOpen(false)} className="absolute top-4 right-4 p-2 text-muted-foreground"><X className="w-5 h-5" /></button><h3 className="font-serif text-2xl mb-2 text-gradient-gold">Set a New Goal</h3><form onSubmit={addGoal} className="space-y-4 mt-5"><input value={draftGoal} onChange={e => setDraftGoal(e.target.value)} placeholder="e.g. Complete Mole Concept practice" className="w-full glass rounded-xl px-4 py-3 text-sm bg-transparent outline-none" autoFocus /><input value={draftTime} onChange={e => setDraftTime(e.target.value)} placeholder="Time limit (optional)" className="w-full glass rounded-xl px-4 py-3 text-sm bg-transparent outline-none" /><button type="submit" disabled={!draftGoal.trim()} className="w-full btn-phoenix rounded-xl py-3 text-sm disabled:opacity-50">Save Goal</button></form></motion.div></motion.div>}</AnimatePresence>
+  </main>;
 }
+
+function Metric({ icon: Icon, label, value }: { icon: typeof Brain; label: string; value: string }) { return <div className="glass-strong rounded-2xl p-4"><Icon className="w-4 h-4 text-rose-gold mb-3" /><div className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">{label}</div><div className="font-serif text-2xl mt-1">{value}</div></div>; }
+
+function Overview({ stats, goals, onToggle, onDelete, onAdd, resources }: any) {
+  return <div className="space-y-7"><section className="grid lg:grid-cols-[1.3fr_.7fr] gap-5"><div className="glass-strong rounded-3xl p-6"><div className="flex items-center justify-between mb-5"><div><p className="text-xs font-mono uppercase tracking-widest text-rose-gold">analytics</p><h2 className="font-serif text-2xl mt-1">Where your effort is going</h2></div><Sparkles className="w-5 h-5 text-rose-gold" /></div>{stats.weakest.length === 0 ? <p className="text-sm text-muted-foreground">Answer adaptive questions and this panel will identify the topics that need the most attention.</p> : <div className="space-y-4">{stats.weakest.map((x: any) => <div key={x.topic}><div className="flex justify-between text-sm mb-1"><span>{x.topic}</span><span className="font-mono text-xs text-muted-foreground">{Math.round(x.accuracy * 100)}%</span></div><div className="h-2 rounded-full bg-foreground/10 overflow-hidden"><div className="h-full bg-rose-gold/70 rounded-full" style={{ width: `${Math.round(x.accuracy * 100)}%` }} /></div></div>)}</div>}</div><div className="glass rounded-3xl p-6"><div className="flex items-center justify-between mb-4"><h2 className="font-serif text-2xl">Today's plan</h2><button onClick={onAdd} className="p-2 rounded-full hover:bg-foreground/5 text-rose-gold"><Plus className="w-4 h-4" /></button></div>{goals.length === 0 ? <p className="text-sm text-muted-foreground">No goals yet. Add one and SkillNests will include it in your activity analytics.</p> : <div className="space-y-2">{goals.map((g: any) => <div key={g.id} className="flex items-center gap-2 text-sm"><button onClick={() => onToggle(g.id, g.completed)}>{g.completed ? <CheckCircle2 className="w-5 h-5 text-rose-gold" /> : <Circle className="w-5 h-5 text-muted-foreground" />}</button><span className={g.completed ? "line-through text-muted-foreground flex-1" : "flex-1"}>{g.task}</span><button onClick={() => onDelete(g.id)}><Trash2 className="w-3.5 h-3.5 text-muted-foreground" /></button></div>)}</div>}</div></section><section className="glass rounded-3xl p-6"><div className="flex items-center justify-between mb-5"><div><p className="text-xs font-mono uppercase tracking-widest text-rose-gold">recommended next</p><h2 className="font-serif text-2xl mt-1">Resources picked from your activity</h2></div></div><div className="grid md:grid-cols-3 gap-3">{resources.length === 0 ? <p className="text-sm text-muted-foreground">Add notes/PYQs or complete a quiz to unlock personalized recommendations.</p> : resources.map((r: any) => <ResourceCard key={`${r.kind}-${r.id}`} resource={r} />)}</div></section></div>;
+}
+
+function AdaptiveQuiz({ events, subject, setSubject }: { events: any[]; subject?: string; setSubject: (v: string | undefined) => void }) {
+  const [started, setStarted] = useState(false); const [answered, setAnswered] = useState<string[]>([]); const [selected, setSelected] = useState<number | null>(null); const [correct, setCorrect] = useState(0); const [sessionTotal, setSessionTotal] = useState(0); const [startedAt, setStartedAt] = useState(0); const [sessionEvents, setSessionEvents] = useState<any[]>([]);
+  const current = useMemo(() => { if (!started) return null; const pool = selectAdaptiveQuestions([...events, ...sessionEvents], 30, subject).filter(q => !answered.includes(q.id)); return pool[0] ?? null; }, [events, sessionEvents, subject, started, answered]);
+  function start() { setStarted(true); setAnswered([]); setSelected(null); setCorrect(0); setSessionTotal(0); setStartedAt(Date.now()); setSessionEvents([]); }
+  function answer(index: number) { if (!current || selected !== null) return; const isCorrect = index === current.answer; setSelected(index); setAnswered(a => [...a, current.id]); setSessionTotal(n => n + 1); if (isCorrect) setCorrect(n => n + 1); const event = { type: "question" as const, itemId: current.id, subject: current.subject, topic: current.topic, correct: isCorrect, durationSec: Math.round((Date.now() - startedAt) / 1000) }; setSessionEvents(e => [...e, event]); recordLearningEvent(event); }
+  if (!started) return <div className="glass-strong rounded-3xl p-8"><div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6"><div><p className="text-xs font-mono uppercase tracking-widest text-rose-gold">adaptive assessment</p><h2 className="font-serif text-3xl mt-1">A quiz that changes with you.</h2><p className="text-sm text-muted-foreground mt-3 max-w-2xl">Questions are selected from your weakest observed topics first. As accuracy improves, harder questions receive priority.</p></div><div className="flex gap-2"><select value={subject ?? "all"} onChange={e => setSubject(e.target.value === "all" ? undefined : e.target.value)} className="glass rounded-full px-4 py-2 text-sm bg-transparent"><option value="all">All subjects</option><option>Mathematics</option><option>Physics</option><option>Chemistry</option><option>Economics</option></select><button onClick={start} className="btn-phoenix rounded-full px-5 py-2.5 text-sm">Start quiz</button></div></div></div>;
+  if (!current) return <div className="glass-strong rounded-3xl p-8 text-center"><Trophy className="w-8 h-8 text-rose-gold mx-auto mb-3" /><h2 className="font-serif text-3xl">Session complete.</h2><p className="text-sm text-muted-foreground mt-2">You answered {sessionTotal} questions and got {correct} correct.</p><button onClick={start} className="btn-ghost-gold rounded-full px-5 py-2.5 text-sm mt-5 inline-flex items-center gap-2"><RotateCcw className="w-4 h-4" /> Start another</button></div>;
+  return <div className="glass-strong rounded-3xl p-6 max-w-3xl mx-auto"><div className="flex justify-between text-xs font-mono uppercase tracking-widest text-muted-foreground mb-5"><span>{current.subject} · {current.topic}</span><span>{current.difficulty}</span></div><h2 className="font-serif text-2xl leading-relaxed">{current.prompt}</h2><div className="grid gap-3 mt-6">{current.options.map((option, i) => <button key={option} disabled={selected !== null} onClick={() => answer(i)} className={`text-left rounded-2xl p-4 border transition ${selected === null ? "glass hover:border-rose-gold/40" : i === current.answer ? "border-emerald-400/50 bg-emerald-400/10" : i === selected ? "border-crimson/50 bg-crimson/10" : "glass opacity-60"}`}><span className="font-mono text-xs mr-3">{String.fromCharCode(65 + i)}</span>{option}</button>)}</div>{selected !== null && <div className="mt-5"><div className="text-sm font-medium">{selected === current.answer ? "Correct." : "Not quite."}</div><p className="text-xs text-muted-foreground mt-1">{current.explanation}</p><button onClick={() => setSelected(null)} className="btn-phoenix rounded-full px-5 py-2.5 text-sm mt-4">Next question</button></div>}</div>;
+}
+
+function ResourcePanel({ resources }: { resources: any[] }) { return <section className="space-y-5"><div><p className="text-xs font-mono uppercase tracking-widest text-rose-gold">resource recommendation engine</p><h2 className="font-serif text-3xl mt-1">Your next best resources.</h2><p className="text-sm text-muted-foreground mt-2">Recommendations prioritize observed weak topics and diversify between notes, PYQs and peer resources.</p></div><div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">{resources.length === 0 ? <div className="glass rounded-2xl p-8 text-sm text-muted-foreground">No resources match yet. Complete a few questions and add study resources.</div> : resources.map(r => <ResourceCard key={`${r.kind}-${r.id}`} resource={r} />)}</div></section>; }
+function ResourceCard({ resource }: { resource: any }) { return <a href={resource.url === "#" ? undefined : resource.url} target={resource.url === "#" ? undefined : "_blank"} rel="noreferrer" onClick={() => resource.url !== "#" && recordLearningEvent({ type: "resource", itemId: resource.id })} className="glass rounded-2xl p-5 block hover:border-rose-gold/40 transition"><div className="flex items-center justify-between gap-2"><span className="text-[10px] font-mono uppercase tracking-widest text-rose-gold">{resource.kind}</span><Sparkles className="w-3.5 h-3.5 text-rose-gold" /></div><div className="font-serif text-xl mt-3 line-clamp-2">{resource.title}</div><div className="text-xs text-muted-foreground mt-2">{resource.subtitle}</div><div className="text-xs text-rose-gold/80 mt-4">{resource.reason}</div></a>; }
+
+function PeerPanel({ profile, matches }: { profile: any; matches: any[] }) {
+  const [subjects, setSubjects] = useState(profile?.subjects?.join(", ") ?? "Mathematics, Physics, Chemistry"); const [topics, setTopics] = useState(profile?.topics?.join(", ") ?? ""); const [availability, setAvailability] = useState(profile?.availability ?? "evenings"); const [goal, setGoal] = useState(profile?.goal ?? "exam preparation");
+  function save(e: React.FormEvent) { e.preventDefault(); saveLearningProfile({ subjects: subjects.split(",").map(x => x.trim()).filter(Boolean), topics: topics.split(",").map(x => x.trim()).filter(Boolean), availability, goal }); toast.success("Profile saved. Matching updated."); }
+  return <section className="grid lg:grid-cols-[.8fr_1.2fr] gap-5"><div className="glass-strong rounded-3xl p-6"><div className="flex items-center gap-2"><Users className="w-5 h-5 text-rose-gold" /><h2 className="font-serif text-2xl">Peer-learning profile</h2></div><p className="text-xs text-muted-foreground mt-2">Only these learning preferences are used for matching.</p><form onSubmit={save} className="space-y-4 mt-6"><Field label="Subjects" value={subjects} onChange={setSubjects} placeholder="Mathematics, Physics" /><Field label="Topics" value={topics} onChange={setTopics} placeholder="Vectors, Mole Concept" /><Field label="Availability" value={availability} onChange={setAvailability} placeholder="Evenings" /><Field label="Goal" value={goal} onChange={setGoal} placeholder="JEE preparation" /><button className="btn-phoenix rounded-full px-5 py-2.5 text-sm">Update matching profile</button></form></div><div className="glass rounded-3xl p-6"><p className="text-xs font-mono uppercase tracking-widest text-rose-gold">matching engine</p><h2 className="font-serif text-2xl mt-1">Students you may learn well with.</h2>{!profile ? <p className="text-sm text-muted-foreground mt-5">Save your learning profile to generate matches.</p> : matches.length === 0 ? <p className="text-sm text-muted-foreground mt-5">No strong matches yet. As more students add profiles, SkillNests will surface overlapping subjects, topics and goals.</p> : <div className="space-y-3 mt-5">{matches.map((m: any) => <div key={m.profile.userId} className="glass-strong rounded-2xl p-4"><div className="flex justify-between items-start gap-3"><div><div className="font-serif text-lg">Learning peer</div><div className="text-xs text-muted-foreground mt-1">{m.profile.subjects.join(" · ")}</div></div><span className="text-[10px] font-mono uppercase tracking-widest text-rose-gold">{m.overlap} shared interests</span></div><div className="text-xs text-muted-foreground mt-3">Goal: {m.profile.goal} · Usually available {m.profile.availability}</div></div>)}</div>}</div></section>;
+}
+function Field({ label, value, onChange, placeholder }: { label: string; value: string; onChange: (v: string) => void; placeholder: string }) { return <label className="block"><span className="block text-[10px] font-mono uppercase tracking-widest text-muted-foreground mb-2">{label}</span><input value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} className="w-full glass rounded-xl px-4 py-3 text-sm bg-transparent outline-none" /></label>; }
+function formatDuration(seconds: number) { if (!seconds) return "0m"; const minutes = Math.max(1, Math.round(seconds / 60)); return minutes >= 60 ? `${Math.floor(minutes / 60)}h ${minutes % 60}m` : `${minutes}m`; }
